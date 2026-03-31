@@ -7,7 +7,9 @@ const SUPABASE_URL  = 'https://fzocybokxulzchhkupbj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6b2N5Ym9reHVsemNoaGt1cGJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDk1OTEsImV4cCI6MjA5MDUyNTU5MX0.q2se5gYIPIuWK-s5bcPWm9NtWhpzLbl_zC1OzXrmZ7o';
 
 // ─── INIT ────────────────────────────────────────────
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { storageKey: 'trinca-crm-auth' }
+});
 let _currentUser  = null;
 let _currentPerfil = null;
 
@@ -83,6 +85,9 @@ const SBLeads = {
       data_reativacao:        lead.dataReativacao || null,
       gancho_reativacao:      lead.ganchoReativacao || null,
       tentativas_reativacao:  lead.tentativasReativacao || [],
+      sonho:                  lead.sonho || null,
+      objecao_principal:      lead.objecaoPrincipal || null,
+      notas:                  lead.notas || null,
       data_criacao:           lead.dataCriacao || new Date().toISOString().split('T')[0],
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
     };
@@ -114,6 +119,9 @@ const SBLeads = {
       dataReativacao:       row.data_reativacao,
       ganchoReativacao:     row.gancho_reativacao,
       tentativasReativacao: row.tentativas_reativacao || [],
+      sonho:                row.sonho || '',
+      objecaoPrincipal:     row.objecao_principal || '',
+      notas:                row.notas || '',
       dataCriacao:          row.data_criacao,
       ultimaAtualizacao:    row.ultima_atualizacao,
       _vendedorId:          row.vendedor_id, // referência para gestor
@@ -241,13 +249,20 @@ const SBConfig = {
 // ═══════════════════════════════════════════════════════
 // SYNC ENGINE — carrega Supabase → localStorage ao iniciar
 // ═══════════════════════════════════════════════════════
-async function syncFromSupabase() {
-  try {
-    const leads = await SBLeads.loadAll();
-    localStorage.setItem('tc_leads', JSON.stringify(leads));
-    console.log(`[Trinca 4.0] ${leads.length} leads sincronizados do Supabase`);
-  } catch (e) {
-    console.warn('[syncFromSupabase] falhou, usando cache local:', e.message);
+async function syncFromSupabase(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const leads = await SBLeads.loadAll();
+      localStorage.setItem('tc_leads', JSON.stringify(leads));
+      console.log(`[Trinca 4.0] ${leads.length} leads sincronizados do Supabase`);
+      return;
+    } catch (e) {
+      if (i < retries - 1) {
+        await new Promise(r => setTimeout(r, 800 * (i + 1)));
+        continue;
+      }
+      console.warn('[syncFromSupabase] falhou, usando cache local:', e.message);
+    }
   }
 }
 

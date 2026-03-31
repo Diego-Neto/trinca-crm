@@ -662,6 +662,25 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .fo-next-num{width:24px;height:24px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
 .fo-next-name{font-size:12px;font-weight:700}
 .fo-next-cta{font-size:11px;color:var(--muted2);margin-top:2px}
+
+/* ── RESPONSIVIDADE MOBILE ── */
+@media(max-width:480px){
+  .state-pill{padding:4px 8px;font-size:11px;gap:5px}
+  .state-pill .state-dot{width:7px;height:7px}
+  #focus-btn{display:none}
+  .kanban-col{min-width:200px;max-width:200px}
+  .ac-btns{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .ac-btn{font-size:11px;padding:7px 6px;text-align:center}
+  .form-row{flex-direction:column}
+  .form-col{width:100%!important}
+  .cad-actions{gap:5px}
+  .cad-actions .ac-btn{flex:1 1 calc(50% - 5px);min-width:0}
+}
+
+/* ── RESPONSIVIDADE DESKTOP LARGO ── */
+@media(min-width:1200px){
+  .kanban-col{min-width:260px;max-width:260px}
+}
 </style>
 </head>
 <body>
