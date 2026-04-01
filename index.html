@@ -337,6 +337,11 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 .modal-close:hover{color:var(--text)}
 .form-row{margin-bottom:12px}
 .form-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted2);margin-bottom:5px;display:block}
+.call-result-btn{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;text-align:left;transition:all .15s}
+.call-result-btn.atendida:hover{background:rgba(16,185,129,0.1);border-color:var(--green);color:var(--green)}
+.call-result-btn.tentativa:hover{background:rgba(239,68,68,0.1);border-color:var(--red);color:#fca5a5}
+.canal-sel-btn{padding:7px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.canal-sel-btn.active{background:rgba(139,92,246,0.15);border-color:var(--purple);color:var(--purple2)}
 .form-input,.form-select,.form-textarea{
   width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
   padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit;
@@ -351,6 +356,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   transition:all .15s;text-transform:uppercase;
 }
 .tag-check:checked + .tag-label{background:var(--purple3);border-color:var(--purple);color:var(--purple2)}
+.tag-label.tag-selected{background:var(--purple3) !important;border-color:var(--purple) !important;color:var(--purple2) !important;box-shadow:0 0 0 1px var(--purple)}
 .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-actions{display:flex;gap:8px;margin-top:16px}
 .btn-primary{flex:1;padding:11px;background:var(--purple);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s}
@@ -662,25 +668,6 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .fo-next-num{width:24px;height:24px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
 .fo-next-name{font-size:12px;font-weight:700}
 .fo-next-cta{font-size:11px;color:var(--muted2);margin-top:2px}
-
-/* ── RESPONSIVIDADE MOBILE ── */
-@media(max-width:480px){
-  .state-pill{padding:4px 8px;font-size:11px;gap:5px}
-  .state-pill .state-dot{width:7px;height:7px}
-  #focus-btn{display:none}
-  .kanban-col{min-width:200px;max-width:200px}
-  .ac-btns{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-  .ac-btn{font-size:11px;padding:7px 6px;text-align:center}
-  .form-row{flex-direction:column}
-  .form-col{width:100%!important}
-  .cad-actions{gap:5px}
-  .cad-actions .ac-btn{flex:1 1 calc(50% - 5px);min-width:0}
-}
-
-/* ── RESPONSIVIDADE DESKTOP LARGO ── */
-@media(min-width:1200px){
-  .kanban-col{min-width:260px;max-width:260px}
-}
 </style>
 </head>
 <body>
@@ -1243,6 +1230,30 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
       <button class="modal-close" onclick="closeModal('modal-reactiv')">✕</button>
     </div>
     <div id="modal-reactiv-body"></div>
+  </div>
+</div>
+
+<!-- MODAL RESULTADO LIGAÇÃO -->
+<div class="modal-bg" id="modal-call">
+  <div class="modal-box" style="max-width:340px">
+    <div class="modal-header">
+      <div class="modal-title">📞 Resultado da Ligação</div>
+      <button class="modal-close" onclick="closeModal('modal-call')">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:14px">Como foi a ligação?</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+        <button class="call-result-btn atendida" onclick="confirmCallResult(true)">✅ Atendeu — toque concluído</button>
+        <button class="call-result-btn tentativa" onclick="confirmCallResult(false)">📵 Não atendeu — tentativa registrada</button>
+      </div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">Canal usado</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="call-canal-btns">
+        <button class="canal-sel-btn active" data-canal="LIGACAO-NORMAL" onclick="selectCallCanal(this)">📱 Normal</button>
+        <button class="canal-sel-btn" data-canal="PABX" onclick="selectCallCanal(this)">🏢 PABX</button>
+        <button class="canal-sel-btn" data-canal="LIGACAO-WHATSAPP" onclick="selectCallCanal(this)">💬 WA Áudio</button>
+        <button class="canal-sel-btn" data-canal="LIGACAO-OUTRO" onclick="selectCallCanal(this)">🔗 Outro</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2195,6 +2206,10 @@ function advanceLead(id, newStatus) {
   refreshView();
 }
 
+let _pendingCallId = null;
+let _pendingCallToque = null;
+let _selectedCallCanal = 'LIGACAO-NORMAL';
+
 function advanceCadence(id) {
   // Verificar hiperfoco
   const hfTouches = getTodayTouches(id);
@@ -2206,16 +2221,64 @@ function advanceCadence(id) {
   if (idx < 0) return;
   const lead = leads[idx];
   const newToque = Math.min((lead.diaToqueAtual || 0) + 1, CADENCE_DAYS.length - 1);
+  const canal = CADENCE_CANALS[newToque] || 'WHATSAPP';
+
+  // Se for ligação, abrir modal de resultado antes de registrar
+  if (canal === 'LIGACAO') {
+    _pendingCallId = id;
+    _pendingCallToque = newToque;
+    _selectedCallCanal = 'LIGACAO-NORMAL';
+    document.querySelectorAll('.canal-sel-btn').forEach(b => b.classList.toggle('active', b.dataset.canal === 'LIGACAO-NORMAL'));
+    document.getElementById('modal-call').classList.add('open');
+    return;
+  }
+
   leads[idx].diaToqueAtual = newToque;
   leads[idx].proximoToque = calcNextTouch(leads[idx]);
   leads[idx].ultimaAtualizacao = today();
   leads[idx].status = 'CADENCIA-ATIVA';
   DB.saveLeads(leads);
-  logTouch(id, CADENCE_CANALS[newToque]||'WHATSAPP', 'toque', 'feito');
-  // Streak e celebração
+  logTouch(id, canal, 'toque', 'feito');
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
   celebrateMilestone(todayTouches);
   refreshView();
+}
+
+function selectCallCanal(btn) {
+  _selectedCallCanal = btn.dataset.canal;
+  document.querySelectorAll('.canal-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function confirmCallResult(atendeu) {
+  const id = _pendingCallId;
+  const newToque = _pendingCallToque;
+  if (!id) return;
+  closeModal('modal-call');
+
+  const leads = DB.getLeads();
+  const idx = leads.findIndex(l => l.id === id);
+  if (idx < 0) return;
+
+  if (atendeu) {
+    leads[idx].diaToqueAtual = newToque;
+    leads[idx].proximoToque = calcNextTouch(leads[idx]);
+    leads[idx].ultimaAtualizacao = today();
+    leads[idx].status = 'CADENCIA-ATIVA';
+    DB.saveLeads(leads);
+    logTouch(id, _selectedCallCanal, 'toque', 'atendida');
+  } else {
+    // Tentativa: registra mas NÃO avança o toque
+    DB.saveLeads(leads);
+    logTouch(id, _selectedCallCanal, 'toque', 'tentativa');
+  }
+
+  _pendingCallId = null;
+  _pendingCallToque = null;
+  const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
+  celebrateMilestone(todayTouches);
+  refreshView();
+  if (document.getElementById('focus-overlay').classList.contains('open')) renderFocusMode();
 }
 
 function schedDiag(id) {
@@ -2813,7 +2876,8 @@ function openEditLead(id) {
 function buildLeadForm(lead, defaultStatus) {
   const isEdit = !!lead;
   const l = lead || {
-    id:'', nome:'', whatsapp:'', status: defaultStatus||'NOVO', tags:[],
+    id:'', nome:'', whatsapp:'', telefone:'', email:'', empresa:'', internacional:false, pais:'',
+    status: defaultStatus||'NOVO', tags:[],
     perfilICP:'', pilarFraco:'', dor:'', sonho:'', objecaoPrincipal:'', proximaAcao:'', fluxo:'FRIO',
     notas:'', ticketEstimado:100000,
     dataHoraDiagnostico:'', dataRetornoNutricao:'', motivoNutricao:'', motivoPerdido:''
@@ -2832,9 +2896,34 @@ function buildLeadForm(lead, defaultStatus) {
       <label class="form-label">Nome *</label>
       <input class="form-input" id="fl-nome" value="${l.nome||''}" placeholder="Nome completo">
     </div>
-    <div class="form-row">
-      <label class="form-label">WhatsApp</label>
-      <input class="form-input" id="fl-whats" value="${l.whatsapp||''}" placeholder="(XX) XXXXX-XXXX">
+    <div class="form-row-2">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">WhatsApp</label>
+        <input class="form-input" id="fl-whats" value="${l.whatsapp||''}" placeholder="(XX) XXXXX-XXXX">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Telefone / Celular</label>
+        <input class="form-input" id="fl-telefone" value="${l.telefone||''}" placeholder="(XX) XXXX-XXXX">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="fl-email" type="email" value="${l.email||''}" placeholder="email@exemplo.com">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Empresa</label>
+        <input class="form-input" id="fl-empresa" value="${l.empresa||''}" placeholder="Nome da empresa">
+      </div>
+    </div>
+    <div class="form-row" id="fl-intl-row">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="fl-internacional" ${l.internacional?'checked':''} onchange="toggleInternacional()" style="width:16px;height:16px;accent-color:var(--purple)">
+        🌍 Lead Internacional
+      </label>
+      <div id="fl-pais-row" style="margin-top:8px;display:${l.internacional?'block':'none'}">
+        <input class="form-input" id="fl-pais" value="${l.pais||''}" placeholder="País (ex: Portugal, EUA, Angola...)">
+      </div>
     </div>
     <div class="form-row">
       <label class="form-label" style="color:#fca5a5">DOR — o que ela verbalizou * <span style="font-size:10px;font-weight:400;color:var(--muted)">obrigatório para IA funcionar</span></label>
@@ -2917,7 +3006,7 @@ function buildLeadForm(lead, defaultStatus) {
           <div class="tags-grid">
             ${g.tags.map(t => `
               <input type="checkbox" class="tag-check" id="tag-${t}" name="tags" value="${t}" ${(l.tags||[]).includes(t)?'checked':''}>
-              <label class="tag-label" for="tag-${t}" style="${tagStyle(t)}">${TAG_SHORT[t]||t}</label>
+              <label class="tag-label ${(l.tags||[]).includes(t)?'tag-selected':''}" for="tag-${t}" style="${tagStyle(t)}">${TAG_SHORT[t]||t}</label>
             `).join('')}
           </div>
         </div>
@@ -2967,6 +3056,11 @@ function saveLead(existingId) {
 
   const commonFields = {
     nome, whatsapp: document.getElementById('fl-whats').value,
+    telefone: document.getElementById('fl-telefone')?.value || '',
+    email: document.getElementById('fl-email')?.value || '',
+    empresa: document.getElementById('fl-empresa')?.value || '',
+    internacional: document.getElementById('fl-internacional')?.checked || false,
+    pais: document.getElementById('fl-pais')?.value || '',
     status, tags,
     dor: document.getElementById('fl-dor')?.value?.trim() || '',
     sonho: document.getElementById('fl-sonho')?.value?.trim() || '',
