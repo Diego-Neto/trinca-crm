@@ -1,0 +1,29 @@
+{
+  "name": "trinca-crm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ai.js",
+  "scripts": {
+    "test": "jest --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Diego-Neto/trinca-crm.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Diego-Neto/trinca-crm/issues"
+  },
+  "homepage": "https://github.com/Diego-Neto/trinca-crm#readme",
+  "jest": {
+    "roots": ["<rootDir>"],
+    "testMatch": ["<rootDir>/logic.test.js"],
+    "modulePathIgnorePatterns": [".aiox-core", "squads", "node_modules"]
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
+  }
+}
