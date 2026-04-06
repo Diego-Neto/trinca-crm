@@ -189,12 +189,17 @@ const SBDebriefs = {
       data:        debrief.date,
       humor:       debrief.humor,
       energia:     debrief.energia,
-      fase:        debrief.fase,
+      fase:        debrief.phase || debrief.fase || null,
       pilar_fraco: debrief.pilarFraco,
       lead_id:     debrief.leadId || null,
       perguntas: {
-        q1: debrief.q1, q2: debrief.q2, q3: debrief.q3,
-        q4: debrief.q4, q5: debrief.q5, q6: debrief.q6, q7: debrief.q7,
+        velocidadePensamento: debrief.velocidadePensamento || null,
+        promessaIndevida:     debrief.promessaIndevida     || null,
+        pilarFraco:           debrief.pilarFraco           || null,
+        grandiosidade:        debrief.grandiosidade        || null,
+        saiuLinhaReta:        debrief.saiuLinhaReta         || null,
+        tdahDesviou:          debrief.tdahDesviou          || null,
+        proximaAcao:          debrief.proximaAcao          || null,
       }
     }, { onConflict: 'id' });
     if (error) console.warn('[SBDebriefs.upsert]', error.message);
@@ -209,7 +214,7 @@ const SBState = {
       data:        entry.date,
       humor:       entry.humor,
       energia:     entry.energia,
-      fase:        entry.fase,
+      fase:        entry.phase || entry.fase || null,
     }, { onConflict: 'vendedor_id,data' });
     if (error) console.warn('[SBState.upsert]', error.message);
   }
@@ -255,6 +260,14 @@ async function syncFromSupabase(retries = 3) {
       const leads = await SBLeads.loadAll();
       localStorage.setItem('tc_leads', JSON.stringify(leads));
       console.log(`[Trinca 4.0] ${leads.length} leads sincronizados do Supabase`);
+      // Sync tasks
+      try {
+        const tasks = await _sb.from('tasks').select('*').order('created_at', { ascending: false });
+        if (tasks.data) localStorage.setItem('tc_tasks', JSON.stringify(tasks.data.map(t => ({
+          id: t.id, titulo: t.titulo, tipo: t.tipo, data: t.data,
+          leadId: t.lead_id, done: t.done, createdAt: t.created_at
+        }))));
+      } catch(e) { console.warn('[sync tasks]', e.message); }
       return;
     } catch (e) {
       if (i < retries - 1) {
@@ -268,6 +281,8 @@ async function syncFromSupabase(retries = 3) {
 
 // Intercepta saves do DB original e espelha no Supabase (fire and forget)
 function patchDBForSupabase() {
+  if (DB._sbPatched) return;
+  DB._sbPatched = true;
   const originalSaveLeads = DB.saveLeads.bind(DB);
   DB.saveLeads = function(leads) {
     originalSaveLeads(leads);
@@ -423,6 +438,11 @@ document.addEventListener('keydown', (e) => {
       hideLoginScreen();
       await syncFromSupabase();
       patchDBForSupabase();
+      // Sync ao retornar ao app
+      window.addEventListener('focus', () => { if (_currentUser) syncFromSupabase(); });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && _currentUser) syncFromSupabase();
+      });
       // Atualiza o header com o nome do vendedor
       const brandEl = document.querySelector('.brand');
       if (brandEl && _currentPerfil) {
