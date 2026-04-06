@@ -279,6 +279,73 @@ async function syncFromSupabase(retries = 3) {
   }
 }
 
+// ─── PENDING QUEUE — fila de operações offline ─────
+const PendingQueue = {
+  _KEY: 'tc_pending_sync',
+
+  getAll() {
+    try { return JSON.parse(localStorage.getItem(this._KEY) || '[]'); }
+    catch { return []; }
+  },
+
+  add(op) {
+    const queue = this.getAll();
+    queue.push({ ...op, ts: Date.now(), retries: 0 });
+    // Limite de 200 itens para não estourar localStorage
+    if (queue.length > 200) queue.splice(0, queue.length - 200);
+    localStorage.setItem(this._KEY, JSON.stringify(queue));
+    SyncStatus.updateBadge();
+  },
+
+  remove(index) {
+    const queue = this.getAll();
+    queue.splice(index, 1);
+    localStorage.setItem(this._KEY, JSON.stringify(queue));
+    SyncStatus.updateBadge();
+  },
+
+  clear() {
+    localStorage.removeItem(this._KEY);
+    SyncStatus.updateBadge();
+  },
+
+  get count() { return this.getAll().length; },
+
+  // Reprocessa a fila inteira
+  async flush() {
+    const queue = this.getAll();
+    if (queue.length === 0) return;
+    console.log(`[PendingQueue] Flushing ${queue.length} operações pendentes...`);
+    SyncStatus.show('syncing');
+
+    const failed = [];
+    for (const op of queue) {
+      try {
+        if (op.type === 'leads')     await SBLeads.upsertBatch(op.data);
+        else if (op.type === 'debrief')  await SBDebriefs.upsert(op.data);
+        else if (op.type === 'state')    await SBState.upsert(op.data);
+        else if (op.type === 'tasks')    await SBTasks.upsertBatch(op.data);
+        else if (op.type === 'config')   await SBConfig.save(op.data);
+        else if (op.type === 'touchlog') await SBTouchlog.append(op.data);
+      } catch (e) {
+        op.retries = (op.retries || 0) + 1;
+        if (op.retries < 5) failed.push(op); // Descarta após 5 tentativas
+        console.warn(`[PendingQueue] Falha (tentativa ${op.retries}):`, e.message);
+      }
+    }
+
+    localStorage.setItem(this._KEY, JSON.stringify(failed));
+    SyncStatus.updateBadge();
+    if (failed.length === 0) {
+      SyncStatus.show('ok');
+      console.log('[PendingQueue] Fila limpa — tudo sincronizado');
+    } else {
+      SyncStatus.show('pending');
+      console.log(`[PendingQueue] ${failed.length} operações ainda pendentes`);
+    }
+  }
+};
+
 // ─── SYNC STATUS INDICATOR ─────────────────────────
 const SyncStatus = {
   _pending: 0,
@@ -308,69 +375,80 @@ const SyncStatus = {
       el.style.background = 'rgba(16,185,129,0.15)'; el.style.color = '#10b981'; el.style.opacity = '1';
       setTimeout(() => { el.style.opacity = '0'; }, 2000);
     } else if (state === 'error') {
-      el.textContent = '⚠ Erro no sync — dados salvos local';
+      const n = PendingQueue.count;
+      el.textContent = `⚠ Offline — ${n} pendente${n>1?'s':''}`;
       el.style.background = 'rgba(239,68,68,0.15)'; el.style.color = '#ef4444'; el.style.opacity = '1';
-      setTimeout(() => { el.style.opacity = '0'; }, 5000);
+    } else if (state === 'pending') {
+      const n = PendingQueue.count;
+      el.textContent = `⏳ ${n} pendente${n>1?'s':''} — aguardando rede`;
+      el.style.background = 'rgba(245,158,11,0.15)'; el.style.color = '#f59e0b'; el.style.opacity = '1';
     }
   },
 
-  track(promise) {
+  updateBadge() {
+    const n = PendingQueue.count;
+    if (n > 0) this.show('pending');
+  },
+
+  track(type, promise, data) {
     this._pending++;
     if (this._pending === 1) this.show('syncing');
     return promise.then(r => {
       this._pending--;
-      if (this._pending === 0) this.show('ok');
+      if (this._pending === 0 && PendingQueue.count === 0) this.show('ok');
       return r;
     }).catch(e => {
       this._pending--;
       this._errors.push({ msg: e.message, at: new Date().toISOString() });
       if (this._errors.length > 20) this._errors.shift();
+      // Salva na fila para tentar depois
+      PendingQueue.add({ type, data });
       this.show('error');
-      console.warn('[Sync Error]', e.message);
+      console.warn('[Sync Error]', type, e.message);
     });
   }
 };
 
-// Intercepta saves do DB original e espelha no Supabase (com status visual)
+// Intercepta saves do DB original e espelha no Supabase (com fila offline)
 function patchDBForSupabase() {
   if (DB._sbPatched) return;
   DB._sbPatched = true;
   const originalSaveLeads = DB.saveLeads.bind(DB);
   DB.saveLeads = function(leads) {
     originalSaveLeads(leads);
-    SyncStatus.track(SBLeads.upsertBatch(leads));
+    SyncStatus.track('leads', SBLeads.upsertBatch(leads), leads);
   };
 
   const originalSaveDebriefs = DB.saveDebriefs.bind(DB);
   DB.saveDebriefs = function(debriefs) {
     originalSaveDebriefs(debriefs);
     const latest = debriefs[debriefs.length - 1];
-    if (latest) SyncStatus.track(SBDebriefs.upsert(latest));
+    if (latest) SyncStatus.track('debrief', SBDebriefs.upsert(latest), latest);
   };
 
   const originalSaveState = DB.saveState.bind(DB);
   DB.saveState = function(state) {
     originalSaveState(state);
-    SyncStatus.track(SBState.upsert(state));
+    SyncStatus.track('state', SBState.upsert(state), state);
   };
 
   const originalSaveTasks = DB.saveTasks.bind(DB);
   DB.saveTasks = function(tasks) {
     originalSaveTasks(tasks);
-    SyncStatus.track(SBTasks.upsertBatch(tasks));
+    SyncStatus.track('tasks', SBTasks.upsertBatch(tasks), tasks);
   };
 
   const originalSaveConfig = DB.saveConfig.bind(DB);
   DB.saveConfig = function(config) {
     originalSaveConfig(config);
-    SyncStatus.track(SBConfig.save(config));
+    SyncStatus.track('config', SBConfig.save(config), config);
   };
 
   const originalSaveTouchlog = DB.saveTouchlog.bind(DB);
   DB.saveTouchlog = function(log) {
     originalSaveTouchlog(log);
     const latest = log[log.length - 1];
-    if (latest) SyncStatus.track(SBTouchlog.append(latest));
+    if (latest) SyncStatus.track('touchlog', SBTouchlog.append(latest), latest);
   };
 
   console.log('[Trinca 4.0] DB patchado — sync Supabase ativo');
@@ -378,6 +456,7 @@ function patchDBForSupabase() {
 
 // Expor para debug
 window.SyncStatus = SyncStatus;
+window.PendingQueue = PendingQueue;
 
 // ═══════════════════════════════════════════════════════
 // LOGIN SCREEN
@@ -533,10 +612,17 @@ document.addEventListener('keydown', (e) => {
       hideLoginScreen();
       await syncFromSupabase();
       patchDBForSupabase();
-      // Sync ao retornar ao app
-      window.addEventListener('focus', () => { if (_currentUser) syncFromSupabase(); });
+      // Flush pendentes + sync ao retornar ao app
+      PendingQueue.flush().catch(() => {});
+      window.addEventListener('focus', () => {
+        if (_currentUser) { PendingQueue.flush().catch(() => {}); syncFromSupabase(); }
+      });
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && _currentUser) syncFromSupabase();
+        if (!document.hidden && _currentUser) { PendingQueue.flush().catch(() => {}); syncFromSupabase(); }
+      });
+      // Flush quando voltar online
+      window.addEventListener('online', () => {
+        if (_currentUser) { console.log('[Trinca 4.0] Online — flushing...'); PendingQueue.flush().catch(() => {}); }
       });
       // Atualiza o header com o nome do vendedor
       const brandEl = document.querySelector('.brand');
