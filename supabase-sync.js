@@ -279,50 +279,105 @@ async function syncFromSupabase(retries = 3) {
   }
 }
 
-// Intercepta saves do DB original e espelha no Supabase (fire and forget)
+// ─── SYNC STATUS INDICATOR ─────────────────────────
+const SyncStatus = {
+  _pending: 0,
+  _errors: [],
+  _el: null,
+
+  _getEl() {
+    if (this._el) return this._el;
+    let el = document.getElementById('sync-status');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'sync-status';
+      el.style.cssText = 'position:fixed;bottom:60px;right:12px;z-index:9990;font-size:11px;padding:4px 10px;border-radius:8px;font-weight:700;transition:opacity 0.3s;pointer-events:none;';
+      document.body.appendChild(el);
+    }
+    this._el = el;
+    return el;
+  },
+
+  show(state) {
+    const el = this._getEl();
+    if (state === 'syncing') {
+      el.textContent = '🔄 Sincronizando...';
+      el.style.background = 'rgba(139,92,246,0.15)'; el.style.color = '#a78bfa'; el.style.opacity = '1';
+    } else if (state === 'ok') {
+      el.textContent = '✓ Sincronizado';
+      el.style.background = 'rgba(16,185,129,0.15)'; el.style.color = '#10b981'; el.style.opacity = '1';
+      setTimeout(() => { el.style.opacity = '0'; }, 2000);
+    } else if (state === 'error') {
+      el.textContent = '⚠ Erro no sync — dados salvos local';
+      el.style.background = 'rgba(239,68,68,0.15)'; el.style.color = '#ef4444'; el.style.opacity = '1';
+      setTimeout(() => { el.style.opacity = '0'; }, 5000);
+    }
+  },
+
+  track(promise) {
+    this._pending++;
+    if (this._pending === 1) this.show('syncing');
+    return promise.then(r => {
+      this._pending--;
+      if (this._pending === 0) this.show('ok');
+      return r;
+    }).catch(e => {
+      this._pending--;
+      this._errors.push({ msg: e.message, at: new Date().toISOString() });
+      if (this._errors.length > 20) this._errors.shift();
+      this.show('error');
+      console.warn('[Sync Error]', e.message);
+    });
+  }
+};
+
+// Intercepta saves do DB original e espelha no Supabase (com status visual)
 function patchDBForSupabase() {
   if (DB._sbPatched) return;
   DB._sbPatched = true;
   const originalSaveLeads = DB.saveLeads.bind(DB);
   DB.saveLeads = function(leads) {
     originalSaveLeads(leads);
-    SBLeads.upsertBatch(leads).catch(e => console.warn('sync leads:', e.message));
+    SyncStatus.track(SBLeads.upsertBatch(leads));
   };
 
   const originalSaveDebriefs = DB.saveDebriefs.bind(DB);
   DB.saveDebriefs = function(debriefs) {
     originalSaveDebriefs(debriefs);
     const latest = debriefs[debriefs.length - 1];
-    if (latest) SBDebriefs.upsert(latest).catch(e => console.warn('sync debrief:', e.message));
+    if (latest) SyncStatus.track(SBDebriefs.upsert(latest));
   };
 
   const originalSaveState = DB.saveState.bind(DB);
   DB.saveState = function(state) {
     originalSaveState(state);
-    SBState.upsert(state).catch(e => console.warn('sync state:', e.message));
+    SyncStatus.track(SBState.upsert(state));
   };
 
   const originalSaveTasks = DB.saveTasks.bind(DB);
   DB.saveTasks = function(tasks) {
     originalSaveTasks(tasks);
-    SBTasks.upsertBatch(tasks).catch(e => console.warn('sync tasks:', e.message));
+    SyncStatus.track(SBTasks.upsertBatch(tasks));
   };
 
   const originalSaveConfig = DB.saveConfig.bind(DB);
   DB.saveConfig = function(config) {
     originalSaveConfig(config);
-    SBConfig.save(config).catch(e => console.warn('sync config:', e.message));
+    SyncStatus.track(SBConfig.save(config));
   };
 
   const originalSaveTouchlog = DB.saveTouchlog.bind(DB);
   DB.saveTouchlog = function(log) {
     originalSaveTouchlog(log);
     const latest = log[log.length - 1];
-    if (latest) SBTouchlog.append(latest).catch(e => console.warn('sync touchlog:', e.message));
+    if (latest) SyncStatus.track(SBTouchlog.append(latest));
   };
 
   console.log('[Trinca 4.0] DB patchado — sync Supabase ativo');
 }
+
+// Expor para debug
+window.SyncStatus = SyncStatus;
 
 // ═══════════════════════════════════════════════════════
 // LOGIN SCREEN

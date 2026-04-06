@@ -1,0 +1,7 @@
+# AIOX framework (symlinks locais, não subir pro GitHub)
+.aiox-core
+.claude/commands
+.claude/rules
+.claude/skills
+.claude/sessions
+squads

@@ -1354,6 +1354,11 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 
 <script>
 // ═══════════════════════════════════════════════════
+// SECURITY — HTML escape para prevenir XSS
+// ═══════════════════════════════════════════════════
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ═══════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════
 const STATUSES = ['NOVO','CADENCIA-ATIVA','AGUARDANDO-DIAGNOSTICO','PROPOSTA-ENVIADA','NUTRICAO','GANHO','PERDIDO','GELADEIRA'];
@@ -1760,7 +1765,7 @@ function openMoveGeladeira(leadId) {
   const d30str = d30.toISOString().split('T')[0];
   document.getElementById('modal-geladeira-body').innerHTML = `
     <div style="font-size:13px;color:var(--muted2);margin-bottom:14px">
-      <strong style="color:var(--text)">${lead.nome}</strong> — Status atual: <span class="chip chip-${lead.status}">${STATUS_LABELS[lead.status]}</span>
+      <strong style="color:var(--text)">${esc(lead.nome)}</strong> — Status atual: <span class="chip chip-${lead.status}">${STATUS_LABELS[lead.status]}</span>
     </div>
     <div class="form-row">
       <label class="form-label">Motivo da pausa *</label>
@@ -2148,16 +2153,16 @@ function renderPipeline() {
       const fluxoBadge = lead.fluxo && lead.fluxo !== 'FRIO' ? `<span class="fluxo-badge ${lead.fluxo.toLowerCase()}">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>` : '';
       const parcelaStr = lead.parcelaMensal ? ` · ${lead.parcelaMensal.toLocaleString('pt-BR')}/mês` : '';
       html += `<div class="lead-card prio-${prio.toLowerCase()}" onclick="openEditLead('${lead.id}')">
-        <div class="lc-name">${lead.nome}${fluxoBadge}</div>
+        <div class="lc-name">${esc(lead.nome)}${fluxoBadge}</div>
         ${tagsTop ? `<div class="lc-meta" style="margin:4px 0 2px">${tagsTop}</div>` : ''}
-        ${dorSnippet ? `<div class="lc-dor">"${dorSnippet}"</div>` : ''}
-        ${proxSnippet ? `<div class="lc-prox">→ ${proxSnippet}</div>` : ''}
+        ${dorSnippet ? `<div class="lc-dor">"${esc(dorSnippet)}"</div>` : ''}
+        ${proxSnippet ? `<div class="lc-prox">→ ${esc(proxSnippet)}</div>` : ''}
         ${tagsBot ? `<div class="lc-meta" style="margin-top:4px">${tagsBot}</div>` : ''}
         ${lead.status==='CADENCIA-ATIVA'||lead.status==='NOVO' ? `<div class="lc-touch ${touchClass}">⚡ ${touchText}</div>` : ''}
         ${lead.status==='AGUARDANDO-DIAGNOSTICO' && lead.dataHoraDiagnostico ? `<div class="lc-touch ${lead.dataHoraDiagnostico.startsWith(today())?'today':''}">📅 ${lead.dataHoraDiagnostico.slice(0,10)}</div>` : ''}
-        ${lead.pilarFraco ? `<div class="lc-pilar">⚠ Fraco: ${lead.pilarFraco}</div>` : ''}
+        ${lead.pilarFraco ? `<div class="lc-pilar">⚠ Fraco: ${esc(lead.pilarFraco)}</div>` : ''}
         ${lead.ticketEstimado ? `<div class="lc-ticket">R$ ${(lead.ticketEstimado/1000).toFixed(0)}k${parcelaStr}</div>` : ''}
-        ${lead.motivoPerdido && lead.status==='PERDIDO' ? `<div style="font-size:10px;color:var(--red);margin-top:3px">${lead.motivoPerdido.slice(0,45)}</div>` : ''}
+        ${lead.motivoPerdido && lead.status==='PERDIDO' ? `<div style="font-size:10px;color:var(--red);margin-top:3px">${esc(lead.motivoPerdido.slice(0,45))}</div>` : ''}
       </div>`;
     });
     html += `<button class="add-btn" onclick="openAddLead('${status}')">+ Lead</button>
@@ -2220,7 +2225,7 @@ function buildActionCard(lead) {
   let action = '';
   if (lead.status === 'NOVO' || lead.status === 'CADENCIA-ATIVA') {
     if (fluxo === 'SINALIZOU' && lead.dor) {
-      action = `<strong>Fluxo: SINALIZOU</strong> ${canalChip}<br>Ancora na DOR revelada: <em>"${lead.dor.slice(0,60)}"</em><br>Não menciona o passado. Pergunta direta sobre a dor e propõe 15 min.`;
+      action = `<strong>Fluxo: SINALIZOU</strong> ${canalChip}<br>Ancora na DOR revelada: <em>"${esc(lead.dor.slice(0,60))}"</em><br>Não menciona o passado. Pergunta direta sobre a dor e propõe 15 min.`;
     } else if (fluxo === 'NEGOCIACAO') {
       action = `<strong>Fluxo: NEGOCIAÇÃO TRAVADA</strong> — Identifique o obstáculo antes de agir:`;
     } else {
@@ -2230,7 +2235,7 @@ function buildActionCard(lead) {
   } else if (lead.status === 'AGUARDANDO-DIAGNOSTICO') {
     action = `<strong>Diagnóstico</strong>${lead.dataHoraDiagnostico ? ` em ${lead.dataHoraDiagnostico.slice(0,10)}` : ''} — Revise CRM, leia script 3x, fixe o nome + DOR`;
   } else if (lead.status === 'PROPOSTA-ENVIADA') {
-    action = `<strong>Follow-up</strong> — Trinca da Certeza: qual das 3 certezas está abaixo de 7/10? ${lead.pilarFraco ? `<br>⚠ Pilar fraco anterior: <strong>${lead.pilarFraco}</strong>` : ''}`;
+    action = `<strong>Follow-up</strong> — Trinca da Certeza: qual das 3 certezas está abaixo de 7/10? ${lead.pilarFraco ? `<br>⚠ Pilar fraco anterior: <strong>${esc(lead.pilarFraco)}</strong>` : ''}`;
   } else if (lead.status === 'NUTRICAO') {
     action = `<strong>Nutrição</strong>${lead.motivoNutricao ? ` (${lead.motivoNutricao})` : ''} — Retorno: ${formatDate(lead.dataRetornoNutricao)}`;
   }
@@ -2256,7 +2261,7 @@ function buildActionCard(lead) {
   const hfTouches = getTodayTouches(lead.id);
   const hfHtml = hfTouches.length>=3 ? `<div class="hf-alert">🔥 Tocado ${hfTouches.length}x hoje — cuidado com hiperfoco</div>` : '';
 
-  const proxAcao = lead.proximaAcao ? `<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">→ ${lead.proximaAcao}</div>` : '';
+  const proxAcao = lead.proximaAcao ? `<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">→ ${esc(lead.proximaAcao)}</div>` : '';
 
   const btns = {
     'NOVO': `<button class="ac-btn green" onclick="advanceLead('${lead.id}','CADENCIA-ATIVA')">✓ Abordado</button><button class="ac-btn blue" onclick="schedDiag('${lead.id}')">📅 Agendar Diag</button>`,
@@ -2271,7 +2276,7 @@ function buildActionCard(lead) {
   const scoreLabel = smartScore >= 75 ? '🔥' : smartScore >= 50 ? '⚡' : '·';
   return `<div class="action-card">
     <div class="ac-top">
-      <div class="ac-name">${lead.nome}${lead.fluxo&&lead.fluxo!=='FRIO'?`<span class="fluxo-badge ${lead.fluxo.toLowerCase()}" style="margin-left:6px">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>`:''}${!lead.dor?` <span title="DOR não preenchida — IA vai gerar mensagem genérica" style="color:#ef4444;font-size:11px;cursor:pointer" onclick="openEditLead('${lead.id}')">⚠ sem dor</span>`:''}
+      <div class="ac-name">${esc(lead.nome)}${lead.fluxo&&lead.fluxo!=='FRIO'?`<span class="fluxo-badge ${lead.fluxo.toLowerCase()}" style="margin-left:6px">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>`:''}${!lead.dor?` <span title="DOR não preenchida — IA vai gerar mensagem genérica" style="color:#ef4444;font-size:11px;cursor:pointer" onclick="openEditLead('${lead.id}')">⚠ sem dor</span>`:''}
       </div>
       <span class="score-badge ${scoreClass}">${scoreLabel}${smartScore}</span>
       <span class="chip chip-${lead.status} ac-status-chip">${STATUS_LABELS[lead.status]}</span>
@@ -2703,10 +2708,10 @@ function updateDebriefPreview() {
   previewEl.style.display='block';
   previewEl.innerHTML = `
     <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:800;margin-bottom:8px">Contexto do Lead</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:6px">${lead.nome}</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px">${esc(lead.nome)}</div>
     <span class="chip chip-${lead.status}" style="font-size:9px">${STATUS_LABELS[lead.status]}</span>
-    ${lead.dor?`<div style="padding:8px;background:rgba(139,92,246,0.06);border-left:3px solid var(--purple);border-radius:4px;font-size:11px;color:var(--muted2);margin:8px 0;line-height:1.5;font-style:italic">"${lead.dor.slice(0,100)}"</div>`:''}
-    ${lead.proximaAcao?`<div style="font-size:10px;color:var(--green);font-weight:600">→ ${lead.proximaAcao.slice(0,60)}</div>`:''}
+    ${lead.dor?`<div style="padding:8px;background:rgba(139,92,246,0.06);border-left:3px solid var(--purple);border-radius:4px;font-size:11px;color:var(--muted2);margin:8px 0;line-height:1.5;font-style:italic">"${esc(lead.dor.slice(0,100))}"</div>`:''}
+    ${lead.proximaAcao?`<div style="font-size:10px;color:var(--green);font-weight:600">→ ${esc(lead.proximaAcao.slice(0,60))}</div>`:''}
   `;
 }
 
@@ -3580,7 +3585,7 @@ function renderTarefas() {
   const sel = document.getElementById('tf-lead');
   if (sel) {
     const leads = DB.getLeads().filter(l=>!['GANHO','PERDIDO'].includes(l.status));
-    sel.innerHTML = '<option value="">— nenhum —</option>' + leads.map(l=>`<option value="${l.id}">${l.nome}</option>`).join('');
+    sel.innerHTML = '<option value="">— nenhum —</option>' + leads.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
   }
   const dateEl = document.getElementById('tf-data');
   if (dateEl && !dateEl.value) dateEl.value = today();
@@ -3618,7 +3623,7 @@ function renderTarefas() {
         <button class="task-check-btn" onclick="toggleTarefa('${t.id}')">${t.done?'✅':'⬜'}</button>
         <div class="task-info">
           <div class="task-title">${TIPO_ICONS[t.tipo]||'✅'} ${t.titulo}</div>
-          ${lead?`<div class="task-lead">${lead.nome}</div>`:''}
+          ${lead?`<div class="task-lead">${esc(lead.nome)}</div>`:''}
         </div>
         <div class="task-actions">${waBtn}${telBtn}${gcalBtn}<button class="task-action-btn" onclick="deleteTarefa('${t.id}')">✕</button></div>
       </div>`;
@@ -4212,7 +4217,7 @@ function renderPlaybookContent() {
   const stateHtml = `<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">🧠 Estado Mental</span><span class="pb-shar">›</span></div><div class="pb-sbody"><div class="pb-eg"><div class="pb-ec lo"><b>⬇ Estado Baixo</b>${stage.lo}</div><div class="pb-ec hi"><b>⬆ Hipomaniaco</b>${stage.hi}</div></div></div></div>`;
 
   // DOR do lead
-  const leadDor = lead && lead.dor ? `<div class="pb-dor">"${lead.dor.slice(0,120)}"</div>` : '';
+  const leadDor = lead && lead.dor ? `<div class="pb-dor">"${esc(lead.dor.slice(0,120))}"</div>` : '';
   // ICP info
   const icpInfo = icp ? `<div class="pb-dor" style="border-color:rgba(139,92,246,0.5)">🎯 ${icp.dor}</div>` : '';
 
