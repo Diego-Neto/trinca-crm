@@ -374,6 +374,10 @@ function showLoginScreen() {
         <input class="login-input" type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
         <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
         <div class="login-error" id="login-error"></div>
+        <div style="text-align:center;margin-top:12px;">
+          <a href="#" id="login-forgot" onclick="doResetPassword()" style="color:#8b5cf6;font-size:12px;text-decoration:none;">Esqueci minha senha</a>
+        </div>
+        <div class="login-error" id="login-reset-msg" style="color:#a78bfa;"></div>
       </div>
     `;
     document.body.appendChild(screen);
@@ -412,6 +416,23 @@ async function doLogin() {
   }
 }
 
+async function doResetPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  const msg = document.getElementById('login-reset-msg');
+  if (!email) { msg.style.display = 'block'; msg.style.color = '#fca5a5'; msg.textContent = 'Digite seu e-mail acima primeiro.'; return; }
+  try {
+    const { error } = await _sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) throw error;
+    msg.style.display = 'block'; msg.style.color = '#a78bfa';
+    msg.textContent = '📧 Link de redefinição enviado para ' + email;
+  } catch(e) {
+    msg.style.display = 'block'; msg.style.color = '#fca5a5';
+    msg.textContent = 'Erro: ' + e.message;
+  }
+}
+
 // Permitir Enter no input de senha
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && document.getElementById('login-screen')?.style.display !== 'none') {
@@ -427,13 +448,32 @@ document.addEventListener('keydown', (e) => {
   SBAuth.onAuthChange(async (event, session) => {
     if (session?.user) {
       _currentUser = session.user;
+      // Determinar role: gestores pré-autorizados
+      const GESTORES = ['rodrigues.diegoneto@gmail.com'];
+      const userEmail = session.user.email;
+      const autoRole = GESTORES.includes(userEmail) ? 'gestor' : 'vendedor';
+
       try {
         _currentPerfil = await SBPerfil.load(session.user.id);
+        // Se é gestor pré-autorizado mas role está errado, corrigir
+        if (autoRole === 'gestor' && _currentPerfil.role !== 'gestor') {
+          const { error } = await _sb.from('perfis').update({ role: 'gestor' }).eq('id', session.user.id);
+          if (!error) { _currentPerfil.role = 'gestor'; console.log('[Trinca 4.0] Role atualizado para gestor'); }
+        }
+      } catch(e) {
+        // Perfil não existe — criar automaticamente
+        console.warn('perfil não encontrado, criando...', e.message);
+        const nome = session.user.user_metadata?.nome || userEmail.split('@')[0];
+        const { data, error } = await _sb.from('perfis').upsert({
+          id: session.user.id, nome, role: autoRole
+        }, { onConflict: 'id' }).select().single();
+        if (!error && data) { _currentPerfil = data; console.log('[Trinca 4.0] Perfil criado:', data.role); }
+        else console.error('[Trinca 4.0] Falha ao criar perfil:', error?.message);
+      }
+      if (_currentPerfil) {
         localStorage.setItem('tc_vendedor_id', session.user.id);
         localStorage.setItem('tc_vendedor_nome', _currentPerfil.nome);
         localStorage.setItem('tc_vendedor_role', _currentPerfil.role);
-      } catch(e) {
-        console.warn('perfil não encontrado, criando...', e.message);
       }
       hideLoginScreen();
       await syncFromSupabase();
