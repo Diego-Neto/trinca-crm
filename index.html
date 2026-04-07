@@ -1861,94 +1861,156 @@ function noShow(id) {
 }
 
 // ═══════════════════════════════════════════════════
-// PREVISIBILIDADE
+// PREVISIBILIDADE — Matemática do Negócio
 // ═══════════════════════════════════════════════════
-function calcPrevisibilidade() {
-  const meta = parseInt(document.getElementById('meta-contratos').value) || 5;
-  const dias = parseInt(document.getElementById('dias-uteis').value) || 22;
-  const propNec = Math.ceil(meta / 0.50);
-  const reunNec = Math.ceil(propNec / 0.40);
-  const agendNec = Math.ceil(reunNec / 0.70);
-  const leadsNec = Math.ceil(agendNec / 0.33);
-  const leadsNecDia = Math.ceil(leadsNec / dias).toFixed(1);
-  const diagDia = (reunNec / dias).toFixed(1);
-  const followDia = (agendNec / dias).toFixed(1);
+var PREV_DIAS_UTEIS = [22,17,21,18,20,21,23,21,22,22,19,22];
+var PREV_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+var PREV_MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var PREV_QUARTERS = [
+  {id:'Q1',m:[0,1,2],obj:'Validar o método nos 7 ICPs e construir base de pipeline previsível'},
+  {id:'Q2',m:[3,4,5],obj:'Escalar volume de diagnósticos e atingir R$1M/mês consistentemente'},
+  {id:'Q3',m:[6,7,8],obj:'Consolidar R$1M/mês e construir carteira de Seeds (indicações)'},
+  {id:'Q4',m:[9,10,11],obj:'Preparar escala com assistente SDR e aumentar ticket médio'}
+];
+var PREV_META = 1000000, PREV_TICKET = 235000, PREV_ICPPCT = 60;
+var PREV_MI = new Date().getMonth(), PREV_QI = Math.floor(PREV_MI/3), PREV_TAB = 0;
 
-  document.getElementById('calc-result').innerHTML = `
-    <div class="cr-row"><span class="cr-label">Meta de contratos/mês</span><span class="cr-value highlight">${meta}</span></div>
-    <div class="cr-row"><span class="cr-label">Propostas necessárias</span><span class="cr-value">${propNec}</span></div>
-    <div class="cr-row"><span class="cr-label">Reuniões/diagnósticos</span><span class="cr-value">${reunNec}</span></div>
-    <div class="cr-row"><span class="cr-label">Agendamentos necessários (70% show)</span><span class="cr-value">${agendNec}</span></div>
-    <div class="cr-row"><span class="cr-label">Leads totais necessários</span><span class="cr-value">${leadsNec}</span></div>
-    <div class="cr-row" style="background:rgba(139,92,246,0.05);border-radius:6px;padding:8px;margin-top:6px">
-      <span class="cr-label" style="font-weight:700;color:var(--text)">📌 Novos leads/dia</span>
-      <span class="cr-value highlight">${leadsNecDia}</span>
-    </div>
-    <div class="cr-row"><span class="cr-label">Diagnósticos/dia</span><span class="cr-value">${diagDia}</span></div>
-    <div class="cr-row"><span class="cr-label">Follow-ups/dia</span><span class="cr-value">${followDia}</span></div>
-  `;
+function prevCalc(dias) {
+  var contratos = Math.ceil(PREV_META / PREV_TICKET);
+  var propostas = Math.ceil(contratos / 0.5);
+  var reunioes = Math.ceil(propostas / 0.4);
+  var agend = Math.ceil(reunioes / 0.7);
+  var leads = Math.ceil(agend / 0.33);
+  var pitchBlend = (PREV_ICPPCT/100)*(1/7)+((100-PREV_ICPPCT)/100)*(1/10);
+  var answerBlend = (PREV_ICPPCT/100)*0.35+((100-PREV_ICPPCT)/100)*0.17;
+  var atend = Math.ceil(agend / pitchBlend);
+  var disc = Math.ceil(atend / answerBlend);
+  return {contratos:contratos,propostas:propostas,reunioes:reunioes,agend:agend,leads:leads,disc:disc,atend:atend,
+    discDia:Math.ceil(disc/dias),atendDia:Math.ceil(atend/dias),diagDia:Math.max(1,Math.ceil(reunioes/dias)),fupDia:Math.ceil((leads*2)/dias)};
+}
+
+function prevSetTab(i) {
+  PREV_TAB = i;
+  document.querySelectorAll('.prev-tab-btn').forEach(function(b,idx){b.classList.toggle('on',idx===i);});
+  ['prev-metas','prev-trimestral','prev-mapa'].forEach(function(id,idx){
+    document.getElementById(id).style.display = idx===i ? 'block' : 'none';
+  });
+  if (i===0) prevRenderMetas();
+  else if (i===1) prevRenderTrimestral();
+  else prevRenderMapa();
+}
+
+function prevF(n) { return Math.round(parseFloat(n)||0).toLocaleString('pt-BR'); }
+
+function prevRenderMetas() {
+  var dias = PREV_DIAS_UTEIS[PREV_MI];
+  var d = prevCalc(dias);
+  var gap = Math.round((d.contratos/1.75-1)*100);
+  var gapCls = gap>100?'prev-red':gap>50?'prev-amber':'prev-blue';
+  document.getElementById('prev-metas').innerHTML =
+    '<div class="prev-slider"><label>Meta mensal (R$)</label><input type="range" min="500000" max="3000000" step="50000" value="'+PREV_META+'" oninput="PREV_META=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_META)+'</span></div>'+
+    '<div class="prev-slider"><label>Ticket médio (R$)</label><input type="range" min="100000" max="500000" step="5000" value="'+PREV_TICKET+'" oninput="PREV_TICKET=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_TICKET)+'</span></div>'+
+    '<div class="prev-slider"><label>% ICP ideal</label><input type="range" min="0" max="100" step="10" value="'+PREV_ICPPCT+'" oninput="PREV_ICPPCT=+this.value;prevRenderMetas()"><span>'+PREV_ICPPCT+'%</span></div>'+
+    '<div class="prev-mes-tabs">'+PREV_MESES.map(function(m,i){return '<button class="prev-mes'+(i===PREV_MI?' on':'')+'" onclick="PREV_MI='+i+';prevRenderMetas()">'+m+'</button>';}).join('')+'</div>'+
+    '<div class="prev-info">'+PREV_MESES_F[PREV_MI]+' 2026 — <strong>'+dias+' dias úteis</strong></div>'+
+    '<div class="prev-grid4">'+
+      '<div class="prev-mc '+gapCls+'"><div class="prev-mc-label">Contratos/mês</div><div class="prev-mc-val">'+d.contratos+'</div><div class="prev-mc-sub">gap: +'+gap+'%</div></div>'+
+      '<div class="prev-mc"><div class="prev-mc-label">Discagens/dia</div><div class="prev-mc-val">'+d.discDia+'</div><div class="prev-mc-sub">'+d.atendDia+' atendem</div></div>'+
+      '<div class="prev-mc"><div class="prev-mc-label">Diagnósticos/dia</div><div class="prev-mc-val">'+d.diagDia+'</div><div class="prev-mc-sub">SPIN + fechar</div></div>'+
+      '<div class="prev-mc"><div class="prev-mc-label">Follow-ups/dia</div><div class="prev-mc-val">'+d.fupDia+'</div><div class="prev-mc-sub">ancora na dor</div></div>'+
+    '</div>'+
+    '<div class="prev-kpi-box">'+
+      '<div class="prev-kpi-title">KPIs do Closer</div>'+
+      [['Taxa de fechamento','45–55%','propostas → contratos'],['Ticket médio','R$ '+prevF(PREV_TICKET),'validado'],['Show rate','70%+','agendados → realizados'],['Conv. reunião → proposta','40%+','diagnósticos → propostas'],['Close rate','50%+','propostas → fechamentos'],['Seeds gerados','3+/mês','indicações de clientes'],['Taxa pitch ICP','14% (1:7)','ligação → diagnóstico'],['Taxa pitch geral','10% (1:10)','ligação → diagnóstico']].map(function(k){return '<div class="prev-kpi-row"><div><div class="prev-kpi-n">'+k[0]+'</div><div class="prev-kpi-m">'+k[2]+'</div></div><div class="prev-kpi-v">'+k[1]+'</div></div>';}).join('')+
+    '</div>'+
+    '<div class="'+(gap>50?'prev-rule':'prev-ok')+'">'+
+      (gap>100?'⚠ Gap de +'+gap+'% acima da média atual (1,75 contratos/mês). Gargalo: volume de discagens. '+d.discDia+' ligações/dia.':
+       gap>50?'⚡ Gap de +'+gap+'%. Executável — você já fechou R$790k num contrato. Volume está certo!':
+       '✅ Meta executável com seu ritmo atual.')+'</div>'+
+    '<div style="font-size:9px;color:var(--muted);margin-top:4px">Histórico real: R$1.649.000 · 7 contratos · 4 meses · ticket médio R$235.571</div>';
+}
+
+function prevRenderTrimestral() {
+  var q = PREV_QUARTERS[PREV_QI];
+  var diasQ = q.m.reduce(function(a,m){return a+PREV_DIAS_UTEIS[m];},0);
+  var contratosQ = Math.ceil(PREV_META*3/PREV_TICKET);
+  var mMeses = q.m.map(function(m){return {mes:PREV_MESES_F[m],dias:PREV_DIAS_UTEIS[m],meta:Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ),contratos:Math.ceil(Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ)/PREV_TICKET)};});
+  document.getElementById('prev-trimestral').innerHTML =
+    '<div class="prev-q-sel">'+PREV_QUARTERS.map(function(q2,i){return '<button class="prev-qb'+(i===PREV_QI?' on':'')+'" onclick="PREV_QI='+i+';prevRenderTrimestral()">'+q2.id+'</button>';}).join('')+'</div>'+
+    '<div class="prev-mc" style="margin-bottom:10px"><div class="prev-mc-label">Objective — '+q.id+' 2026</div><div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px;line-height:1.4">"'+q.obj+'"</div></div>'+
+    '<div class="prev-grid3">'+mMeses.map(function(m){return '<div class="prev-mc"><div class="prev-mc-label">'+m.mes+'</div><div class="prev-mc-val" style="font-size:16px">R$ '+prevF(m.meta)+'</div><div class="prev-mc-sub">'+m.dias+' dias · '+m.contratos+' contratos</div></div>';}).join('')+'</div>'+
+    '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — '+q.id+'</div>'+
+      [['KR1','Fechar '+mMeses.map(function(m){return m.contratos;}).join(' → ')+' contratos',contratosQ+' total'],['KR2','Taxa reunião → proposta acima de 40%','40%+'],['KR3','Show rate acima de 70%','70%+'],['KR4','Gerar 10+ indicações (Seeds) no trimestre','10 seeds']].map(function(k){return '<div class="prev-kpi-row"><div><div style="font-size:9px;font-weight:700;color:var(--muted)">'+k[0]+'</div><div class="prev-kpi-n">'+k[1]+'</div></div><div class="prev-kpi-v">'+k[2]+'</div></div>';}).join('')+
+    '</div>';
+}
+
+function prevRenderMapa() {
+  var dias = 18;
+  var d = prevCalc(dias);
+  var icpAtend = Math.ceil(d.agend/0.14), icpDisc = Math.ceil(icpAtend/0.35), icpDiscDia = Math.ceil(icpDisc/dias);
+  var genAtend = Math.ceil(d.agend/0.10), genDisc = Math.ceil(genAtend/0.17), genDiscDia = Math.ceil(genDisc/dias);
+  function step(n,label,pct,cor,maxN){var w=maxN>0?Math.min(100,(n/maxN)*100):100;return '<div class="prev-funnel-step"><div class="prev-funnel-bar" style="width:'+w+'%;background:'+cor+'"></div><div class="prev-funnel-name">'+label+'</div><div class="prev-funnel-num">'+prevF(n)+'</div><div class="prev-funnel-pct">'+pct+'</div></div>';}
+  document.getElementById('prev-mapa').innerHTML =
+    '<div class="prev-info">Meta R$ '+prevF(PREV_META)+' · Ticket R$ '+prevF(PREV_TICKET)+'</div>'+
+    '<div class="prev-grid2">'+
+      '<div class="prev-mc prev-green" style="text-align:center"><div class="prev-mc-label">ICP ideal — disc/dia</div><div class="prev-mc-val">'+icpDiscDia+'</div><div class="prev-mc-sub">35% atendem · 1:7</div></div>'+
+      '<div class="prev-mc prev-amber" style="text-align:center"><div class="prev-mc-label">ICP geral — disc/dia</div><div class="prev-mc-val">'+genDiscDia+'</div><div class="prev-mc-sub">17% atendem · 1:10</div></div>'+
+    '</div>'+
+    '<div class="prev-grid2" style="margin-bottom:12px">'+
+      '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
+        '<div style="padding:8px 10px;background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.3);font-size:11px;font-weight:600;color:#10b981">ICP ideal<br><span style="font-size:9px;opacity:.8">1:7 pitch · 35% atend</span></div>'+
+        step(icpDisc,'Discagens','100%','#10b981',icpDisc)+step(icpAtend,'Atendem (35%)','35%','#10b981',icpDisc)+step(d.agend,'Pitch → diag (1:7)','14%','#10b981',icpDisc)+step(d.reunioes,'Show (70%)','70%','#10b981',icpDisc)+step(d.propostas,'Proposta (40%)','40%','#10b981',icpDisc)+step(d.contratos,'Contrato (50%)','50%','#10b981',icpDisc)+
+      '</div>'+
+      '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
+        '<div style="padding:8px 10px;background:rgba(249,115,22,0.1);border-bottom:1px solid rgba(249,115,22,0.3);font-size:11px;font-weight:600;color:#f97316">ICP geral<br><span style="font-size:9px;opacity:.8">1:10 pitch · 17% atend</span></div>'+
+        step(genDisc,'Discagens','100%','#f97316',genDisc)+step(genAtend,'Atendem (17%)','17%','#f97316',genDisc)+step(d.agend,'Pitch → diag (1:10)','10%','#f97316',genDisc)+step(d.reunioes,'Show (70%)','70%','#f97316',genDisc)+step(d.propostas,'Proposta (40%)','40%','#f97316',genDisc)+step(d.contratos,'Contrato (50%)','50%','#f97316',genDisc)+
+      '</div>'+
+    '</div>'+
+    '<div class="prev-ok"><strong>Diferença ICP:</strong> Para '+d.contratos+' contratos, ICP ideal exige '+prevF(icpDisc)+' disc vs '+prevF(genDisc)+' sem qualificação. '+prevF(genDisc-icpDisc)+' disc a menos.</div>';
 }
 
 function renderPrevisibilidade() {
-  calcPrevisibilidade();
-  const metrics = DB.getMetrics();
-  const lastWeek = metrics[metrics.length - 1] || {};
+  // Sub-tabs
+  document.getElementById('prev-tabs').innerHTML =
+    '<button class="prev-tab-btn'+(PREV_TAB===0?' on':'')+'" onclick="prevSetTab(0)">Metas & KPIs</button>'+
+    '<button class="prev-tab-btn'+(PREV_TAB===1?' on':'')+'" onclick="prevSetTab(1)">Trimestral</button>'+
+    '<button class="prev-tab-btn'+(PREV_TAB===2?' on':'')+'" onclick="prevSetTab(2)">O Mapa</button>';
+  prevSetTab(PREV_TAB);
 
-  const meta = parseInt(document.getElementById('meta-contratos')?.value) || 5;
-  const propNec = Math.ceil(meta / 0.50);
-  const reunNec = Math.ceil(propNec / 0.40);
-
-  const fields = [
-    {key:'leadsAbordados', label:'Leads abordados (semana)', meta:null},
-    {key:'diagnosticosAgendados', label:'Diagnósticos agendados', meta:reunNec},
-    {key:'diagnosticosRealizados', label:'Diagnósticos realizados (show)', meta:null},
-    {key:'propostas', label:'Propostas enviadas', meta:propNec},
-    {key:'contratos', label:'Contratos fechados', meta:meta},
-    {key:'seeds', label:'Indicações geradas (Seeds)', meta:10},
+  // Weekly metrics form (preservado)
+  var metrics = DB.getMetrics();
+  var lastWeek = metrics[metrics.length - 1] || {};
+  var meta = Math.ceil(PREV_META / PREV_TICKET);
+  var propNec = Math.ceil(meta / 0.50);
+  var reunNec = Math.ceil(propNec / 0.40);
+  var fields = [
+    {key:'leadsAbordados', label:'Leads abordados (semana)'},
+    {key:'diagnosticosAgendados', label:'Diagnósticos agendados'},
+    {key:'diagnosticosRealizados', label:'Diagnósticos realizados (show)'},
+    {key:'propostas', label:'Propostas enviadas'},
+    {key:'contratos', label:'Contratos fechados'},
+    {key:'seeds', label:'Indicações geradas (Seeds)'},
   ];
-
-  let formHtml = '';
-  fields.forEach(f => {
-    formHtml += `<div class="week-input-row">
-      <div class="week-label">${f.label}</div>
-      <input class="week-input" type="number" id="wm-${f.key}" value="${lastWeek[f.key]||0}" min="0">
-    </div>`;
+  var formHtml = '';
+  fields.forEach(function(f){
+    formHtml += '<div class="week-input-row"><div class="week-label">'+f.label+'</div><input class="week-input" type="number" id="wm-'+f.key+'" value="'+(lastWeek[f.key]||0)+'" min="0"></div>';
   });
-  formHtml += `<button class="save-metrics-btn" onclick="saveWeekMetrics()">Salvar métricas da semana</button>`;
+  formHtml += '<button class="save-metrics-btn" onclick="saveWeekMetrics()">Salvar métricas da semana</button>';
   document.getElementById('week-metrics-form').innerHTML = formHtml;
 
-  // Performance display
-  const leads = DB.getLeads();
-  const ganhos = leads.filter(l => l.status === 'GANHO').length;
-  const pipeline = leads.filter(l => !['GANHO','PERDIDO'].includes(l.status)).length;
-  const propostas = leads.filter(l => l.status === 'PROPOSTA-ENVIADA').length;
-  const diags = leads.filter(l => l.status === 'AGUARDANDO-DIAGNOSTICO').length;
-
-  document.getElementById('performance-display').innerHTML = `
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-label">No Pipeline</div>
-        <div class="metric-value" style="color:var(--purple2)">${pipeline}</div>
-        <div class="metric-target">leads ativos</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Diagnósticos</div>
-        <div class="metric-value" style="color:var(--orange)">${diags}</div>
-        <div class="metric-target">agendados</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Propostas</div>
-        <div class="metric-value" style="color:var(--pink)">${propostas}</div>
-        <div class="metric-target">enviadas</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Contratos</div>
-        <div class="metric-value" style="color:var(--green)">${ganhos}</div>
-        <div class="metric-target">meta: ${meta}/mês</div>
-        <div class="progress-bar"><div class="progress-fill ${ganhos>=meta?'ok':ganhos>meta*0.5?'warn':'bad'}" style="width:${Math.min(100,ganhos/meta*100)}%"></div></div>
-      </div>
-    </div>
-  `;
+  // Performance display (preservado)
+  var leads = DB.getLeads();
+  var ganhos = leads.filter(function(l){return l.status==='GANHO';}).length;
+  var pipeline = leads.filter(function(l){return !['GANHO','PERDIDO'].includes(l.status);}).length;
+  var propostas = leads.filter(function(l){return l.status==='PROPOSTA-ENVIADA';}).length;
+  var diags = leads.filter(function(l){return l.status==='AGUARDANDO-DIAGNOSTICO';}).length;
+  document.getElementById('performance-display').innerHTML =
+    '<div class="metrics-grid">'+
+      '<div class="metric-card"><div class="metric-label">No Pipeline</div><div class="metric-value" style="color:var(--purple2)">'+pipeline+'</div><div class="metric-target">leads ativos</div></div>'+
+      '<div class="metric-card"><div class="metric-label">Diagnósticos</div><div class="metric-value" style="color:var(--orange)">'+diags+'</div><div class="metric-target">agendados</div></div>'+
+      '<div class="metric-card"><div class="metric-label">Propostas</div><div class="metric-value" style="color:var(--pink)">'+propostas+'</div><div class="metric-target">enviadas</div></div>'+
+      '<div class="metric-card"><div class="metric-label">Contratos</div><div class="metric-value" style="color:var(--green)">'+ganhos+'</div><div class="metric-target">meta: '+meta+'/mês</div><div class="progress-bar"><div class="progress-fill '+(ganhos>=meta?'ok':ganhos>meta*0.5?'warn':'bad')+'" style="width:'+Math.min(100,ganhos/meta*100)+'%"></div></div></div>'+
+    '</div>';
 }
 
 function saveWeekMetrics() {
