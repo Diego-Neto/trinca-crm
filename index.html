@@ -1861,9 +1861,15 @@ function noShow(id) {
 }
 
 // ═══════════════════════════════════════════════════
-// PREVISIBILIDADE — Matemática do Negócio
+// PREVISIBILIDADE — Matemática do Negócio (v021)
 // ═══════════════════════════════════════════════════
-var PREV_DIAS_UTEIS = [22,17,21,18,20,21,23,21,22,22,19,22];
+var PREV_FERIADOS = ['2026-02-16','2026-02-17','2026-02-18','2026-04-03','2026-04-05','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-12-25'];
+function prevDiasUteis(mes) {
+  var d=0, total=new Date(2026,mes+1,0).getDate();
+  for(var i=1;i<=total;i++){var dt=new Date(2026,mes,i);if(dt.getDay()===0||dt.getDay()===6)continue;var ds='2026-'+String(mes+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');if(!PREV_FERIADOS.includes(ds))d++;}
+  return d;
+}
+var PREV_DIAS_UTEIS = Array.from({length:12},function(_,i){return prevDiasUteis(i);});
 var PREV_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 var PREV_MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var PREV_QUARTERS = [
@@ -1881,12 +1887,12 @@ function prevCalc(dias) {
   var reunioes = Math.ceil(propostas / 0.4);
   var agend = Math.ceil(reunioes / 0.7);
   var leads = Math.ceil(agend / 0.33);
-  var pitchBlend = (PREV_ICPPCT/100)*(1/7)+((100-PREV_ICPPCT)/100)*(1/10);
-  var answerBlend = (PREV_ICPPCT/100)*0.35+((100-PREV_ICPPCT)/100)*0.17;
+  var ansBlend = (PREV_ICPPCT/100)*0.35+((100-PREV_ICPPCT)/100)*0.17;
+  var pitchBlend = (PREV_ICPPCT/100)*0.14+((100-PREV_ICPPCT)/100)*0.10;
   var atend = Math.ceil(agend / pitchBlend);
-  var disc = Math.ceil(atend / answerBlend);
+  var disc = Math.ceil(atend / ansBlend);
   return {contratos:contratos,propostas:propostas,reunioes:reunioes,agend:agend,leads:leads,disc:disc,atend:atend,
-    discDia:Math.ceil(disc/dias),atendDia:Math.ceil(atend/dias),diagDia:Math.max(1,Math.ceil(reunioes/dias)),fupDia:Math.ceil((leads*2)/dias)};
+    discDia:Math.ceil(disc/dias),atendDia:Math.ceil(atend/dias),diagDia:Math.max(1,Math.ceil(reunioes/dias)),fupDia:Math.ceil((leads*2)/dias),pitchBlend:pitchBlend,ansBlend:ansBlend};
 }
 
 function prevSetTab(i) {
@@ -1902,95 +1908,117 @@ function prevSetTab(i) {
 
 function prevF(n) { return Math.round(parseFloat(n)||0).toLocaleString('pt-BR'); }
 
+function prevKpiDot(val,mn,mx) {
+  var n = parseFloat(val)||0;
+  if (n>=mx) return '#10b981';
+  if (n>=mn) return '#f97316';
+  return '#ef4444';
+}
+
 function prevRenderMetas() {
   var dias = PREV_DIAS_UTEIS[PREV_MI];
   var d = prevCalc(dias);
-  var gap = Math.round((d.contratos/1.75-1)*100);
-  var gapCls = gap>100?'prev-red':gap>50?'prev-amber':'prev-blue';
+  var ferMap = {1:['16,17,18 (Carnaval)'],3:['3 (Sexta Santa)','5 (Páscoa)','21 (Tiradentes)'],4:['1 (Dia do Trabalho)'],5:['4 (Corpus Christi)'],8:['7 (Independência)'],9:['12 (N.Sra Aparecida)'],10:['2 (Finados)','15 (Proclamação)'],11:['25 (Natal)']};
+  var fer = ferMap[PREV_MI];
+  var kpis = [
+    {n:'Taxa de fechamento',real:'50%',meta:'45–55%',mn:45,mx:55,src:'Jordan Belfort / seu histórico'},
+    {n:'Ticket médio real',real:'R$235k',meta:'R$150–235k+',mn:150,mx:300,src:'Seus últimos 7 contratos'},
+    {n:'Show rate',real:'70%',meta:'70%+',mn:70,mx:100,src:'Benchmark mercado'},
+    {n:'Conv. reunião→proposta',real:'40%',meta:'40%+',mn:40,mx:100,src:'G4 Sales / Full Sales B2B'},
+    {n:'Atendimento warm (FACIAP)',real:'35%',meta:'30–40%',mn:30,mx:40,src:'Cognism 2025 warm'},
+    {n:'Atendimento frio',real:'17%',meta:'15–20%',mn:15,mx:25,src:'Cognism 55k chamadas'},
+    {n:'Conv. pitch ICP ideal (1:7)',real:'14%',meta:'12–16%',mn:12,mx:16,src:'Seu histórico validado'},
+    {n:'Conv. pitch ICP geral (1:10)',real:'10%',meta:'8–12%',mn:8,mx:12,src:'Benchmark consultivo'},
+    {n:'Seeds gerados/mês',real:'—',meta:'3+/mês',mn:3,mx:10,src:'G4 OKR'},
+    {n:'Tempo médio diagnóstico',real:'—',meta:'25–30 min',mn:25,mx:30,src:'Playbook Closer'}
+  ];
   document.getElementById('prev-metas').innerHTML =
-    '<div class="prev-slider"><label>Meta mensal (R$)</label><input type="range" min="500000" max="3000000" step="50000" value="'+PREV_META+'" oninput="PREV_META=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_META)+'</span></div>'+
-    '<div class="prev-slider"><label>Ticket médio (R$)</label><input type="range" min="100000" max="500000" step="5000" value="'+PREV_TICKET+'" oninput="PREV_TICKET=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_TICKET)+'</span></div>'+
-    '<div class="prev-slider"><label>% ICP ideal</label><input type="range" min="0" max="100" step="10" value="'+PREV_ICPPCT+'" oninput="PREV_ICPPCT=+this.value;prevRenderMetas()"><span>'+PREV_ICPPCT+'%</span></div>'+
+    '<div class="prev-slider"><label>Meta mensal</label><input type="range" min="500000" max="3000000" step="50000" value="'+PREV_META+'" oninput="PREV_META=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_META)+'</span></div>'+
+    '<div class="prev-slider"><label>Ticket médio</label><input type="range" min="100000" max="500000" step="5000" value="'+PREV_TICKET+'" oninput="PREV_TICKET=+this.value;prevRenderMetas()"><span>R$ '+prevF(PREV_TICKET)+'</span></div>'+
+    '<div class="prev-slider"><label>% ICP ideal</label><input type="range" min="0" max="100" step="10" value="'+PREV_ICPPCT+'" oninput="PREV_ICPPCT=+this.value;prevRenderMetas()"><span>'+PREV_ICPPCT+'% FACIAP+</span></div>'+
     '<div class="prev-mes-tabs">'+PREV_MESES.map(function(m,i){return '<button class="prev-mes'+(i===PREV_MI?' on':'')+'" onclick="PREV_MI='+i+';prevRenderMetas()">'+m+'</button>';}).join('')+'</div>'+
-    '<div class="prev-info">'+PREV_MESES_F[PREV_MI]+' 2026 — <strong>'+dias+' dias úteis</strong></div>'+
+    (fer?'<div class="prev-info">Feriados em '+PREV_MESES_F[PREV_MI]+': '+fer.join(', ')+' — já descontados. Dias úteis: <strong>'+dias+'</strong></div>':'<div class="prev-info">'+PREV_MESES_F[PREV_MI]+' tem <strong>'+dias+' dias úteis</strong>.</div>')+
     '<div class="prev-grid4">'+
-      '<div class="prev-mc '+gapCls+'"><div class="prev-mc-label">Contratos/mês</div><div class="prev-mc-val">'+d.contratos+'</div><div class="prev-mc-sub">gap: +'+gap+'%</div></div>'+
-      '<div class="prev-mc"><div class="prev-mc-label">Discagens/dia</div><div class="prev-mc-val">'+d.discDia+'</div><div class="prev-mc-sub">'+d.atendDia+' atendem</div></div>'+
-      '<div class="prev-mc"><div class="prev-mc-label">Diagnósticos/dia</div><div class="prev-mc-val">'+d.diagDia+'</div><div class="prev-mc-sub">SPIN + fechar</div></div>'+
-      '<div class="prev-mc"><div class="prev-mc-label">Follow-ups/dia</div><div class="prev-mc-val">'+d.fupDia+'</div><div class="prev-mc-sub">ancora na dor</div></div>'+
+      '<div class="prev-mc"><div class="prev-mc-label">Contratos</div><div class="prev-mc-val">'+d.contratos+'</div><div class="prev-mc-sub">pra R$ '+prevF(PREV_META)+'</div></div>'+
+      '<div class="prev-mc prev-red"><div class="prev-mc-label">Discagens/dia</div><div class="prev-mc-val">'+d.discDia+'</div><div class="prev-mc-sub">'+d.atendDia+' atendem</div></div>'+
+      '<div class="prev-mc prev-blue"><div class="prev-mc-label">Diagnósticos/dia</div><div class="prev-mc-val">'+d.diagDia+'</div><div class="prev-mc-sub">SPIN + fechar</div></div>'+
+      '<div class="prev-mc prev-amber"><div class="prev-mc-label">Total/dia</div><div class="prev-mc-val">'+(d.discDia+d.fupDia+d.diagDia)+'</div><div class="prev-mc-sub">interações</div></div>'+
     '</div>'+
-    '<div class="prev-kpi-box">'+
-      '<div class="prev-kpi-title">KPIs do Closer</div>'+
-      [['Taxa de fechamento','45–55%','propostas → contratos'],['Ticket médio','R$ '+prevF(PREV_TICKET),'validado'],['Show rate','70%+','agendados → realizados'],['Conv. reunião → proposta','40%+','diagnósticos → propostas'],['Close rate','50%+','propostas → fechamentos'],['Seeds gerados','3+/mês','indicações de clientes'],['Taxa pitch ICP','14% (1:7)','ligação → diagnóstico'],['Taxa pitch geral','10% (1:10)','ligação → diagnóstico']].map(function(k){return '<div class="prev-kpi-row"><div><div class="prev-kpi-n">'+k[0]+'</div><div class="prev-kpi-m">'+k[2]+'</div></div><div class="prev-kpi-v">'+k[1]+'</div></div>';}).join('')+
-    '</div>'+
-    '<div class="'+(gap>50?'prev-rule':'prev-ok')+'">'+
-      (gap>100?'⚠ Gap de +'+gap+'% acima da média atual (1,75 contratos/mês). Gargalo: volume de discagens. '+d.discDia+' ligações/dia.':
-       gap>50?'⚡ Gap de +'+gap+'%. Executável — você já fechou R$790k num contrato. Volume está certo!':
-       '✅ Meta executável com seu ritmo atual.')+'</div>'+
-    '<div style="font-size:9px;color:var(--muted);margin-top:4px">Histórico real: R$1.649.000 · 7 contratos · 4 meses · ticket médio R$235.571</div>';
+    '<div style="height:1px;background:var(--border);margin:9px 0"></div>'+
+    '<div class="prev-kpi-title" style="margin-bottom:8px">KPIs do closer — benchmarks G4 + Jordan + mercado</div>'+
+    kpis.map(function(k){return '<div class="prev-kpi-row"><div class="prev-kpi-dot" style="background:'+prevKpiDot(parseFloat(k.real)||0,k.mn,k.mx)+'"></div><div style="flex:1"><div class="prev-kpi-n">'+k.n+'</div><div class="prev-kpi-m">'+k.src+'</div></div><div class="prev-kpi-m" style="min-width:60px;text-align:right">'+k.meta+'</div><div class="prev-kpi-v" style="color:'+prevKpiDot(parseFloat(k.real)||0,k.mn,k.mx)+'">'+k.real+'</div></div>';}).join('')+
+    '<div style="font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6">Fontes: Cognism State of Cold Calling 2025 · G4 Aceleração de Vendas · Jordan Belfort Three Tens · Full Sales B2B benchmarks 2025 · Seu histórico real (7 contratos, R$1,649M)</div>';
+}
+
+var PREV_QOS = ['','','',''];
+var PREV_Q_REAL = [['','','',''],['','','',''],['','','',''],['','','','']];
+
+function prevSemColor(pct) {
+  if (pct<60) return {bg:'rgba(239,68,68,0.08)',c:'#ef4444',txt:'Execução falha'};
+  if (pct<=80) return {bg:'rgba(16,185,129,0.08)',c:'#10b981',txt:'Saudável'};
+  return {bg:'rgba(249,115,22,0.08)',c:'#f97316',txt:'Meta fácil'};
 }
 
 function prevRenderTrimestral() {
-  var q = PREV_QUARTERS[PREV_QI];
-  var diasQ = q.m.reduce(function(a,m){return a+PREV_DIAS_UTEIS[m];},0);
+  var qi = PREV_QI;
+  var meses = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]][qi];
+  var diasQ = meses.reduce(function(a,m){return a+PREV_DIAS_UTEIS[m];},0);
   var contratosQ = Math.ceil(PREV_META*3/PREV_TICKET);
-  var mMeses = q.m.map(function(m){return {mes:PREV_MESES_F[m],dias:PREV_DIAS_UTEIS[m],meta:Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ),contratos:Math.ceil(Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ)/PREV_TICKET)};});
+  var mMeses = meses.map(function(m){return {mes:PREV_MESES_F[m],dias:PREV_DIAS_UTEIS[m],meta:Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ),contratos:Math.ceil(Math.ceil(PREV_META*PREV_DIAS_UTEIS[m]/diasQ)/PREV_TICKET)};});
+  var krs = [
+    {n:'KR1',txt:'Fechar contratos: '+mMeses.map(function(m){return m.contratos;}).join(' → '),meta:contratosQ},
+    {n:'KR2',txt:'Taxa reunião → proposta acima de 40%',meta:40},
+    {n:'KR3',txt:'Show rate acima de 70%',meta:70},
+    {n:'KR4',txt:'Gerar 10+ indicações (Seeds)',meta:10}
+  ];
+  var reals = PREV_Q_REAL[qi];
+  var pcts = krs.map(function(k,i){var r=parseFloat(reals[i])||0;return k.meta>0?Math.min(100,Math.round((r/k.meta)*100)):0;});
+  var avgPct = Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
+  var sem = prevSemColor(avgPct);
+
   document.getElementById('prev-trimestral').innerHTML =
-    '<div class="prev-q-sel">'+PREV_QUARTERS.map(function(q2,i){return '<button class="prev-qb'+(i===PREV_QI?' on':'')+'" onclick="PREV_QI='+i+';prevRenderTrimestral()">'+q2.id+'</button>';}).join('')+'</div>'+
-    '<div class="prev-mc" style="margin-bottom:10px"><div class="prev-mc-label">Objective — '+q.id+' 2026</div><div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px;line-height:1.4">"'+q.obj+'"</div></div>'+
+    '<div class="prev-q-sel">'+['Q1','Q2','Q3','Q4'].map(function(q2,i){return '<button class="prev-qb'+(i===qi?' on':'')+'" onclick="PREV_QI='+i+';prevRenderTrimestral()">'+q2+'<br><span style="font-size:9px;font-weight:400">'+PREV_MESES[[[0,1,2],[3,4,5],[6,7,8],[9,10,11]][i][0]]+'–'+PREV_MESES[[[0,1,2],[3,4,5],[6,7,8],[9,10,11]][i][2]]+'</span></button>';}).join('')+'</div>'+
+    '<div class="prev-mc" style="margin-bottom:10px"><div class="prev-mc-label">Objective — Q'+(qi+1)+' 2026</div><input class="prev-okr-inp" type="text" placeholder="Ex: Construir base de pipeline previsível..." value="'+(PREV_QOS[qi]||'')+'" oninput="PREV_QOS['+qi+']=this.value" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--text);margin-top:6px"></div>'+
     '<div class="prev-grid3">'+mMeses.map(function(m){return '<div class="prev-mc"><div class="prev-mc-label">'+m.mes+'</div><div class="prev-mc-val" style="font-size:16px">R$ '+prevF(m.meta)+'</div><div class="prev-mc-sub">'+m.dias+' dias · '+m.contratos+' contratos</div></div>';}).join('')+'</div>'+
-    '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — '+q.id+'</div>'+
-      [['KR1','Fechar '+mMeses.map(function(m){return m.contratos;}).join(' → ')+' contratos',contratosQ+' total'],['KR2','Taxa reunião → proposta acima de 40%','40%+'],['KR3','Show rate acima de 70%','70%+'],['KR4','Gerar 10+ indicações (Seeds) no trimestre','10 seeds']].map(function(k){return '<div class="prev-kpi-row"><div><div style="font-size:9px;font-weight:700;color:var(--muted)">'+k[0]+'</div><div class="prev-kpi-n">'+k[1]+'</div></div><div class="prev-kpi-v">'+k[2]+'</div></div>';}).join('')+
+    '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — Q'+(qi+1)+'</div>'+
+      krs.map(function(k,i){var sem2=prevSemColor(pcts[i]);return '<div class="prev-kpi-row"><div style="font-size:9px;font-weight:700;color:var(--muted);min-width:26px">'+k.n+'</div><div style="flex:1"><div class="prev-kpi-n">'+k.txt+'</div></div><input type="number" placeholder="Real" value="'+(reals[i]||'')+'" oninput="PREV_Q_REAL['+qi+']['+i+']=this.value;prevRenderTrimestral()" style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:11px;color:var(--text);text-align:right">'+(reals[i]?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;min-width:36px;text-align:center;background:'+sem2.bg+';color:'+sem2.c+'">'+pcts[i]+'%</span>':'<span style="font-size:9px;padding:2px 6px;color:var(--muted)">—</span>')+'</div>';}).join('')+
     '</div>'+
-    '<div class="prev-kpi-box" style="margin-top:10px"><div class="prev-kpi-title">Semáforo G4 de atingimento</div>'+
-      '<div class="prev-sem-row">'+
-        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--red)"></div>Abaixo de 60% — execução falha. Revisão imediata.</div>'+
-        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--orange)"></div>60–80% — saudável. Ajusta o parafuso.</div>'+
-        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--green)"></div>Acima de 90% — meta fácil. Sobe o OKR.</div>'+
-      '</div>'+
-    '</div>'+
-    '<div style="margin-top:8px;font-size:9px;color:var(--muted)">OKR G4: 70–80% de atingimento é saudável — você está jogando no limite certo.</div>';
+    '<div style="padding:10px 12px;border-radius:9px;border:1px solid '+sem.c+';background:'+sem.bg+';margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:500;color:'+sem.c+'">Atingimento Q'+(qi+1)+'</span><span style="font-size:20px;font-weight:500;color:'+sem.c+'">'+avgPct+'%</span></div><div style="font-size:10px;color:'+sem.c+';margin-top:3px">'+sem.txt+'</div><div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;border-radius:2px;width:'+avgPct+'%;background:'+sem.c+'"></div></div></div>'+
+    '<div class="prev-grid3"><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><strong>&lt;60%</strong><br>Execução falha.<br>Revisar imediato.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(16,185,129,0.08);color:#10b981;border:1px solid rgba(16,185,129,0.3)"><strong>60–80%</strong><br>Saudável. Meta<br>ambiciosa + real.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(249,115,22,0.08);color:#f97316;border:1px solid rgba(249,115,22,0.3)"><strong>&gt;90%</strong><br>Meta fácil demais.<br>Sobe o OKR.</div></div>';
 }
 
 function prevRenderMapa() {
   var dias = PREV_DIAS_UTEIS[PREV_MI];
   var d = prevCalc(dias);
-  var icpAtend = Math.ceil(d.agend/0.14), icpDisc = Math.ceil(icpAtend/0.35), icpDiscDia = Math.ceil(icpDisc/dias);
-  var genAtend = Math.ceil(d.agend/0.10), genDisc = Math.ceil(genAtend/0.17), genDiscDia = Math.ceil(genDisc/dias);
+  var icpAtend = Math.ceil(d.agend/0.14), icpIcpQ = Math.ceil(icpAtend*0.7), icpDisc = Math.ceil(icpAtend/0.35);
+  var genAtend = Math.ceil(d.agend/0.10), genIcpQ = Math.ceil(genAtend*0.4), genDisc = Math.ceil(genAtend/0.17);
   function step(n,label,pct,cor,maxN){var w=maxN>0?Math.min(100,(n/maxN)*100):100;return '<div class="prev-funnel-step"><div class="prev-funnel-bar" style="width:'+w+'%;background:'+cor+'"></div><div class="prev-funnel-name">'+label+'</div><div class="prev-funnel-num">'+prevF(n)+'</div><div class="prev-funnel-pct">'+pct+'</div></div>';}
-  var scaleRows = [
-    {t:7,s:1,d:Math.ceil(7/0.35),t2:10,s2:1,d2:Math.ceil(10/0.17)},
-    {t:70,s:10,d:Math.ceil(70/0.35),t2:100,s2:10,d2:Math.ceil(100/0.17)},
-    {t:700,s:100,d:Math.ceil(700/0.35),t2:1000,s2:100,d2:Math.ceil(1000/0.17)},
-    {t:7000,s:1000,d:Math.ceil(7000/0.35),t2:10000,s2:1000,d2:Math.ceil(10000/0.17)}
-  ];
-  var scaleBody = scaleRows.map(function(r){
-    return '<tr><td class="prev-scale-n">'+r.t.toLocaleString('pt-BR')+'</td><td class="prev-scale-g">'+r.s.toLocaleString('pt-BR')+'</td><td style="color:var(--muted)">'+r.d.toLocaleString('pt-BR')+'</td><td class="prev-scale-n">'+r.t2.toLocaleString('pt-BR')+'</td><td class="prev-scale-a">'+r.s2.toLocaleString('pt-BR')+'</td><td style="color:var(--muted)">'+r.d2.toLocaleString('pt-BR')+'</td></tr>';
-  }).join('');
+  function makeSteps(disc,atend,icpQ,cor){return step(disc,'Discagens','100%',cor,disc)+step(atend,'Atendimentos',Math.round(atend/disc*100)+'%',cor,disc)+step(icpQ,'ICP qualificado',Math.round(icpQ/atend*100)+'%',cor,disc)+step(d.agend,'Diagnósticos agendados',Math.round(d.agend/icpQ*100)+'%',cor,disc)+step(d.reunioes,'Diagnósticos realizados','70%',cor,disc)+step(d.propostas,'Propostas enviadas','40%',cor,disc)+step(d.contratos,'Contratos fechados','50%',cor,disc);}
+  var scale = [[7,1,10,1],[70,10,100,10],[700,100,1000,100],[7000,1000,10000,1000]];
   document.getElementById('prev-mapa').innerHTML =
-    '<div class="prev-info">Meta R$ '+prevF(PREV_META)+' · Ticket R$ '+prevF(PREV_TICKET)+' · '+PREV_MESES_F[PREV_MI]+' 2026: <strong>'+dias+' dias úteis</strong></div>'+
-    '<div class="prev-grid2">'+
-      '<div class="prev-mc prev-green" style="text-align:center"><div class="prev-mc-label">ICP ideal — disc/dia</div><div class="prev-mc-val">'+icpDiscDia+'</div><div class="prev-mc-sub">FACIAP · grupos quentes · 35% atendem</div></div>'+
-      '<div class="prev-mc prev-amber" style="text-align:center"><div class="prev-mc-label">ICP geral — disc/dia</div><div class="prev-mc-val">'+genDiscDia+'</div><div class="prev-mc-sub">frio puro · 17% atendem</div></div>'+
+    '<div class="prev-info">Meta R$ '+prevF(PREV_META)+' · Ticket R$ '+prevF(PREV_TICKET)+' · '+PREV_MESES_F[PREV_MI]+': <strong>'+dias+' dias úteis</strong> · '+PREV_ICPPCT+'% ICP ideal</div>'+
+    '<div class="prev-grid2" style="margin-bottom:8px">'+
+      '<div class="prev-mc prev-green" style="text-align:center"><div class="prev-mc-label">Discagens/dia — ICP</div><div class="prev-mc-val">'+Math.ceil(icpDisc/dias)+'</div><div class="prev-mc-sub">'+Math.ceil(icpAtend/dias)+' atendem · '+Math.ceil(d.agend/dias)+' diagnósticos</div></div>'+
+      '<div class="prev-mc prev-amber" style="text-align:center"><div class="prev-mc-label">Discagens/dia — geral</div><div class="prev-mc-val">'+Math.ceil(genDisc/dias)+'</div><div class="prev-mc-sub">'+Math.ceil(genAtend/dias)+' atendem · '+Math.ceil(d.agend/dias)+' diagnósticos</div></div>'+
     '</div>'+
     '<div class="prev-grid2" style="margin-bottom:12px">'+
       '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
-        '<div style="padding:8px 10px;background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.3);font-size:11px;font-weight:600;color:#10b981">ICP ideal<br><span style="font-size:9px;opacity:.8">1:7 pitch · 35% atend</span></div>'+
-        step(icpDisc,'Discagens no mês','100%','#10b981',icpDisc)+step(icpAtend,'Atendem (35%)','35%','#10b981',icpDisc)+step(d.agend,'Pitch → diagnóstico (1:7)','14%','#10b981',icpDisc)+step(d.reunioes,'Show rate (70%)','70%','#10b981',icpDisc)+step(d.propostas,'Proposta (40%)','40%','#10b981',icpDisc)+step(d.contratos,'Contrato (50%)','50%','#10b981',icpDisc)+
+        '<div style="padding:8px 10px;background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.3);font-size:11px;font-weight:600;color:#10b981">ICP ideal — FACIAP / quente<br><span style="font-size:9px;opacity:.8">1:7 pitch · 35% atendimento · ligação 1ª</span></div>'+
+        makeSteps(icpDisc,icpAtend,icpIcpQ,'#10b981')+
       '</div>'+
       '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
-        '<div style="padding:8px 10px;background:rgba(249,115,22,0.1);border-bottom:1px solid rgba(249,115,22,0.3);font-size:11px;font-weight:600;color:#f97316">ICP geral<br><span style="font-size:9px;opacity:.8">1:10 pitch · 17% atend</span></div>'+
-        step(genDisc,'Discagens no mês','100%','#f97316',genDisc)+step(genAtend,'Atendem (17%)','17%','#f97316',genDisc)+step(d.agend,'Pitch → diagnóstico (1:10)','10%','#f97316',genDisc)+step(d.reunioes,'Show rate (70%)','70%','#f97316',genDisc)+step(d.propostas,'Proposta (40%)','40%','#f97316',genDisc)+step(d.contratos,'Contrato (50%)','50%','#f97316',genDisc)+
+        '<div style="padding:8px 10px;background:rgba(249,115,22,0.1);border-bottom:1px solid rgba(249,115,22,0.3);font-size:11px;font-weight:600;color:#f97316">ICP geral — sem qualificação<br><span style="font-size:9px;opacity:.8">1:10 pitch · 17% atendimento · frio puro</span></div>'+
+        makeSteps(genDisc,genAtend,genIcpQ,'#f97316')+
       '</div>'+
     '</div>'+
+    '<div class="prev-ok"><strong>Diferença brutal:</strong> Para os mesmos '+d.contratos+' contratos — ICP: '+prevF(icpDisc)+' discagens · Geral: '+prevF(genDisc)+' discagens. <strong>Diferença: '+prevF(genDisc-icpDisc)+' discagens a mais sem qualificação.</strong> You are a sifter, not an alchemist.</div>'+
     '<div style="height:1px;background:var(--border);margin:10px 0"></div>'+
     '<div class="prev-mc-label" style="display:block;margin-bottom:8px">Escala — se falo com X, vendo Y</div>'+
     '<table class="prev-scale-table">'+
-      '<thead><tr><th>Atend. ICP</th><th>Vendas</th><th>Disc.</th><th>Atend. geral</th><th>Vendas</th><th>Disc.</th></tr></thead>'+
-      '<tbody>'+scaleBody+'</tbody>'+
+      '<thead><tr><th>Falas ICP</th><th>Vendas</th><th>Disc.</th><th>Falas geral</th><th>Vendas</th><th>Disc.</th></tr></thead>'+
+      '<tbody>'+scale.map(function(r){return '<tr><td class="prev-scale-n">'+r[0].toLocaleString('pt-BR')+'</td><td class="prev-scale-g">'+r[1]+'</td><td style="color:var(--muted)">'+Math.ceil(r[0]/0.35).toLocaleString('pt-BR')+'</td><td class="prev-scale-n">'+r[2].toLocaleString('pt-BR')+'</td><td class="prev-scale-a">'+r[3]+'</td><td style="color:var(--muted)">'+Math.ceil(r[2]/0.17).toLocaleString('pt-BR')+'</td></tr>';}).join('')+'</tbody>'+
     '</table>'+
-    '<div class="prev-ok"><strong>A diferença do ICP:</strong> Para os mesmos '+d.contratos+' contratos, ICP ideal exige '+prevF(icpDisc)+' discagens/mês vs '+prevF(genDisc)+' sem qualificação. Diferença: '+prevF(genDisc-icpDisc)+' discagens a menos. You are a sifter, not an alchemist.</div>'+
-    '<div style="font-size:9px;color:var(--muted);margin-top:4px">Fontes: Cognism 2025 (55.701 chamadas — 16,6% atendimento frio / 35% warm); Aaron Ross Receita Previsível; suas taxas reais: 1:7 ICP / 1:10 geral.</div>';
+    '<div style="font-size:9px;color:var(--muted);line-height:1.6">Cognism 2025 (55k chamadas) · G4 Benchmarks · Jordan Belfort Three Tens · Seu histórico real</div>';
 }
 
 function renderPrevisibilidade() {
