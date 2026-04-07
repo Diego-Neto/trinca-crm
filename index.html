@@ -1203,9 +1203,33 @@ function renderFocusMode() {
     return;
   }
 
-  var canal = CADENCE_CANALS[Math.min((next.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
-  var canalIcon = CANAL_ICONS[canal]||'💬';
-  var canalLabel = CANAL_LABELS[canal]||canal;
+  // S5: Playbook-aware canal detection
+  var foPbStageId = typeof getPlaybookStage === 'function' ? getPlaybookStage(next) : null;
+  var foPbStage = null;
+  var foPbCad = null;
+  if (foPbStageId && typeof PB_STAGES !== 'undefined') {
+    var _foIdx = PB_STAGES.findIndex(function(s) { return s.id === foPbStageId; });
+    if (_foIdx >= 0) foPbStage = PB_STAGES[_foIdx];
+  }
+  if (foPbStage && foPbStage.cad && foPbStage.cad.length > 0) {
+    foPbCad = foPbStage.cad;
+  }
+
+  var canal, canalIcon, canalLabel;
+  if (foPbCad) {
+    var foToqueIdx = next.toqueNoStage != null ? next.toqueNoStage : (next.diaToqueAtual || 0);
+    var foCadEntry = foPbCad[Math.min(foToqueIdx, foPbCad.length - 1)] || {};
+    var foCadL = (foCadEntry.l || '').toLowerCase();
+    if (foCadL.indexOf('liga') >= 0) { canal = 'LIGACAO'; }
+    else if (foCadL.indexOf('instagram') >= 0 || foCadL.indexOf('insta') >= 0) { canal = 'INSTAGRAM'; }
+    else { canal = 'WHATSAPP'; }
+    canalIcon = CANAL_ICONS[canal]||'💬';
+    canalLabel = foCadEntry.l || CANAL_LABELS[canal]||canal;
+  } else {
+    canal = CADENCE_CANALS[Math.min((next.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+    canalIcon = CANAL_ICONS[canal]||'💬';
+    canalLabel = CANAL_LABELS[canal]||canal;
+  }
 
   // --- Phase banners ---
   var phaseBanner = '';
@@ -1225,11 +1249,12 @@ function renderFocusMode() {
   // --- B) Rich Lead Card ---
   var statusColor = STATUS_COLORS[next.status] || 'var(--muted)';
   var statusLabel = STATUS_LABELS[next.status] || next.status;
-  var toqueAtual = (next.diaToqueAtual || 0) + 1;
-  var totalToques = CADENCE_DAYS.length;
+  var toqueAtual = (next.toqueNoStage != null ? next.toqueNoStage : (next.diaToqueAtual || 0)) + 1;
+  var totalToques = foPbCad ? foPbCad.length : CADENCE_DAYS.length;
   var dotsHtml = '';
-  for (var di = 1; di < totalToques; di++) {
-    dotsHtml += '<div class="fo-dot' + (di <= toqueAtual ? ' filled' : '') + '"></div>';
+  for (var di = 1; di <= totalToques; di++) {
+    var dotLabel = foPbCad ? (foPbCad[di-1] ? foPbCad[di-1].d : '') : '';
+    dotsHtml += '<div class="fo-dot' + (di <= toqueAtual ? ' filled' : '') + '"' + (dotLabel ? ' title="'+dotLabel+'"' : '') + '></div>';
   }
 
   // Days since last contact
@@ -1274,8 +1299,27 @@ function renderFocusMode() {
   // Queue
   var nextLeads = sorted.slice(1,4);
   var nextHtml = nextLeads.length ? '<div style="margin-top:16px"><div class="fo-section-label">Depois disso...</div>' + nextLeads.map(function(l,i) {
-    var lCanal = CADENCE_CANALS[Math.min((l.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
-    return '<div class="fo-next"><div class="fo-next-num">' + (i+2) + '</div><div><div class="fo-next-name">' + esc(l.nome) + '</div><div class="fo-next-cta">' + (CANAL_ICONS[lCanal]||'💬') + ' ' + (l.proximaAcao ? esc(l.proximaAcao.slice(0,50)) : 'Próximo toque') + '</div></div></div>';
+    var lCanal = 'WHATSAPP';
+    var lCanalIcon = '💬';
+    // S5: Playbook-aware canal for queue leads
+    var _lPbStId = typeof getPlaybookStage === 'function' ? getPlaybookStage(l) : null;
+    var _lPbSt = null;
+    if (_lPbStId && typeof PB_STAGES !== 'undefined') {
+      var _lIdx = PB_STAGES.findIndex(function(s) { return s.id === _lPbStId; });
+      if (_lIdx >= 0) _lPbSt = PB_STAGES[_lIdx];
+    }
+    if (_lPbSt && _lPbSt.cad && _lPbSt.cad.length > 0) {
+      var _lTq = l.toqueNoStage != null ? l.toqueNoStage : (l.diaToqueAtual || 0);
+      var _lCe = _lPbSt.cad[Math.min(_lTq, _lPbSt.cad.length - 1)] || {};
+      var _lCl = (_lCe.l || '').toLowerCase();
+      if (_lCl.indexOf('liga') >= 0) lCanal = 'LIGACAO';
+      else if (_lCl.indexOf('instagram') >= 0 || _lCl.indexOf('insta') >= 0) lCanal = 'INSTAGRAM';
+      lCanalIcon = CANAL_ICONS[lCanal]||'💬';
+    } else {
+      lCanal = CADENCE_CANALS[Math.min((l.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+      lCanalIcon = CANAL_ICONS[lCanal]||'💬';
+    }
+    return '<div class="fo-next"><div class="fo-next-num">' + (i+2) + '</div><div><div class="fo-next-name">' + esc(l.nome) + '</div><div class="fo-next-cta">' + lCanalIcon + ' ' + (l.proximaAcao ? esc(l.proximaAcao.slice(0,50)) : 'Próximo toque') + '</div></div></div>';
   }).join('') + '</div>' : '';
 
   body.innerHTML = phaseBanner + '<div class="fo-card fo-card-in" id="fo-active-card">' +
@@ -1288,7 +1332,7 @@ function renderFocusMode() {
       '<span class="fo-status-chip" style="background:' + statusColor + '">' + statusLabel + '</span>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
-      '<span style="font-size:11px;color:var(--muted)">Toque ' + toqueAtual + ' de ' + (totalToques-1) + '</span>' +
+      '<span style="font-size:11px;color:var(--muted)">Toque ' + toqueAtual + ' de ' + (foPbCad ? totalToques : (totalToques-1)) + '</span>' +
       '<div class="fo-dots">' + dotsHtml + '</div>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
@@ -1356,7 +1400,24 @@ function focoNaoAtendeu(id) {
   var leads = DB.getLeads();
   var idx = leads.findIndex(function(l) { return l.id === id; });
   if (idx < 0) return;
-  var canal = CADENCE_CANALS[Math.min((leads[idx].diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+  // S5: Playbook-aware canal
+  var canal = 'WHATSAPP';
+  var _fnLead = leads[idx];
+  var _fnPbStId = typeof getPlaybookStage === 'function' ? getPlaybookStage(_fnLead) : null;
+  var _fnPbSt = null;
+  if (_fnPbStId && typeof PB_STAGES !== 'undefined') {
+    var _fnIdx = PB_STAGES.findIndex(function(s) { return s.id === _fnPbStId; });
+    if (_fnIdx >= 0) _fnPbSt = PB_STAGES[_fnIdx];
+  }
+  if (_fnPbSt && _fnPbSt.cad && _fnPbSt.cad.length > 0) {
+    var _fnTq = _fnLead.toqueNoStage != null ? _fnLead.toqueNoStage : (_fnLead.diaToqueAtual || 0);
+    var _fnCe = _fnPbSt.cad[Math.min(_fnTq, _fnPbSt.cad.length - 1)] || {};
+    var _fnCl = (_fnCe.l || '').toLowerCase();
+    if (_fnCl.indexOf('liga') >= 0) canal = 'LIGACAO';
+    else if (_fnCl.indexOf('instagram') >= 0 || _fnCl.indexOf('insta') >= 0) canal = 'INSTAGRAM';
+  } else {
+    canal = CADENCE_CANALS[Math.min((_fnLead.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+  }
   logTouch(id, canal, 'toque', 'nao-atendeu');
   leads[idx].ultimaAtualizacao = today();
   leads[idx]._skipFocoAte = today();
@@ -1652,13 +1713,59 @@ function renderCadencia() {
 
 function buildActionCard(lead) {
   const nextTouchNum = (lead.diaToqueAtual || 0) + 1;
-  const msgIdx = Math.min(nextTouchNum, CADENCE_MESSAGES.length - 1);
-  const msg = CADENCE_MESSAGES[msgIdx] || '';
-  const canal = CADENCE_CANALS[msgIdx] || 'WHATSAPP';
-  const canalChip = `<span class="canal-chip ${canal}">${CANAL_ICONS[canal]} ${CANAL_LABELS[canal]}</span>`;
   const fluxo = lead.fluxo || 'FRIO';
   const nt = lead.proximoToque || calcNextTouch(lead);
   const diff = nt ? daysDiff(nt) : null;
+
+  // S4: Playbook-aware cadence data
+  var pbStageId = typeof getPlaybookStage === 'function' ? getPlaybookStage(lead) : null;
+  var pbStage = null;
+  var pbIcpId = typeof getPlaybookICP === 'function' ? getPlaybookICP(lead) : null;
+  if (pbStageId && typeof PB_STAGES !== 'undefined') {
+    var _pbIdx = PB_STAGES.findIndex(function(s) { return s.id === pbStageId; });
+    if (_pbIdx >= 0) pbStage = PB_STAGES[_pbIdx];
+  }
+
+  var pbCadEntry = null;
+  var pbScript = null;
+  var usePb = false;
+  if (pbStage && pbStage.cad && pbStage.cad.length > 0) {
+    usePb = true;
+    var toqueIdx = lead.toqueNoStage || 0;
+    pbCadEntry = pbStage.cad[Math.min(toqueIdx, pbStage.cad.length - 1)] || null;
+    if (pbIcpId && pbStage.scripts && pbStage.scripts[pbIcpId]) {
+      pbScript = pbStage.scripts[pbIcpId];
+    }
+  }
+
+  // Determine canal and chip (playbook-first, fallback to generic)
+  var canal, canalChip;
+  if (usePb && pbCadEntry) {
+    var cadLabel = (pbCadEntry.l || '').toLowerCase();
+    if (cadLabel.indexOf('liga') >= 0) { canal = 'LIGACAO'; }
+    else if (cadLabel.indexOf('instagram') >= 0 || cadLabel.indexOf('insta') >= 0) { canal = 'INSTAGRAM'; }
+    else { canal = 'WHATSAPP'; }
+    canalChip = `<span class="canal-chip ${canal}">${CANAL_ICONS[canal]||'💬'} ${pbCadEntry.l}</span>`;
+  } else {
+    var msgIdx = Math.min(nextTouchNum, CADENCE_CANALS.length - 1);
+    canal = CADENCE_CANALS[msgIdx] || 'WHATSAPP';
+    canalChip = `<span class="canal-chip ${canal}">${CANAL_ICONS[canal]} ${CANAL_LABELS[canal]}</span>`;
+  }
+
+  // Stage badge
+  var stageBadge = '';
+  if (pbStage) {
+    stageBadge = `<span class="fluxo-badge" style="margin-left:6px;background:var(--purple);color:#fff;font-size:10px;padding:2px 6px;border-radius:8px">${pbStage.icon||''} ${pbStage.nome}</span>`;
+  }
+
+  // Message / action text
+  var msg = '';
+  if (usePb && pbCadEntry) {
+    msg = pbCadEntry.a || '';
+  } else {
+    var _msgIdx = Math.min(nextTouchNum, CADENCE_MESSAGES.length - 1);
+    msg = CADENCE_MESSAGES[_msgIdx] || '';
+  }
 
   let action = '';
   if (lead.status === 'NOVO' || lead.status === 'CADENCIA-ATIVA') {
@@ -1666,16 +1773,34 @@ function buildActionCard(lead) {
       action = `<strong>Fluxo: SINALIZOU</strong> ${canalChip}<br>Ancora na DOR revelada: <em>"${esc(lead.dor.slice(0,60))}"</em><br>Não menciona o passado. Pergunta direta sobre a dor e propõe 15 min.`;
     } else if (fluxo === 'NEGOCIACAO') {
       action = `<strong>Fluxo: NEGOCIAÇÃO TRAVADA</strong> — Identifique o obstáculo antes de agir:`;
+    } else if (usePb && pbCadEntry) {
+      var touchLabel = pbCadEntry.d || ('Toque ' + nextTouchNum);
+      action = `<strong>${touchLabel}</strong> ${canalChip} — ${esc(msg)}`;
+      if (lead.status === 'NOVO') action = `<strong>Primeiro contato</strong> ${canalChip} — ${esc(msg)}`;
     } else {
       action = `<strong>Toque ${nextTouchNum}</strong> ${canalChip} — ${msg}`;
       if (lead.status === 'NOVO') action = `<strong>Primeiro contato</strong> ${canalChip} — ${msg}`;
     }
   } else if (lead.status === 'AGUARDANDO-DIAGNOSTICO') {
-    action = `<strong>Diagnóstico</strong>${lead.dataHoraDiagnostico ? ` em ${lead.dataHoraDiagnostico.slice(0,10)}` : ''} — Revise CRM, leia script 3x, fixe o nome + DOR`;
+    if (usePb && pbCadEntry) {
+      action = `<strong>Diagnóstico</strong>${lead.dataHoraDiagnostico ? ` em ${lead.dataHoraDiagnostico.slice(0,10)}` : ''} ${canalChip} — ${esc(msg)}`;
+    } else {
+      action = `<strong>Diagnóstico</strong>${lead.dataHoraDiagnostico ? ` em ${lead.dataHoraDiagnostico.slice(0,10)}` : ''} — Revise CRM, leia script 3x, fixe o nome + DOR`;
+    }
   } else if (lead.status === 'PROPOSTA-ENVIADA') {
-    action = `<strong>Follow-up</strong> — Trinca da Certeza: qual das 3 certezas está abaixo de 7/10? ${lead.pilarFraco ? `<br>⚠ Pilar fraco anterior: <strong>${esc(lead.pilarFraco)}</strong>` : ''}`;
+    if (usePb && pbCadEntry) {
+      action = `<strong>Follow-up</strong> ${canalChip} — ${esc(msg)} ${lead.pilarFraco ? `<br>⚠ Pilar fraco: <strong>${esc(lead.pilarFraco)}</strong>` : ''}`;
+    } else {
+      action = `<strong>Follow-up</strong> — Trinca da Certeza: qual das 3 certezas está abaixo de 7/10? ${lead.pilarFraco ? `<br>⚠ Pilar fraco anterior: <strong>${esc(lead.pilarFraco)}</strong>` : ''}`;
+    }
   } else if (lead.status === 'NUTRICAO') {
     action = `<strong>Nutrição</strong>${lead.motivoNutricao ? ` (${lead.motivoNutricao})` : ''} — Retorno: ${formatDate(lead.dataRetornoNutricao)}`;
+  }
+
+  // Script sugerido (playbook ICP)
+  var scriptHtml = '';
+  if (pbScript) {
+    scriptHtml = `<div style="margin-top:6px;padding:6px 8px;background:var(--bg-alt,#f8f8f8);border-radius:6px;font-size:11px;color:var(--muted)"><strong>Script:</strong> ${esc(pbScript.slice(0,180))}${pbScript.length>180?'...':''}</div>`;
   }
 
   const negocScenarios = fluxo === 'NEGOCIACAO' ? `
@@ -1688,14 +1813,26 @@ function buildActionCard(lead) {
       <button class="negoc-btn" onclick="openEditLead('${lead.id}')">⑥ Terceiro envolvido — incluir o decisor</button>
     </div>` : '';
 
-  // Progress de cadência
-  const cadDayNum = lead.diaToqueAtual || 0;
-  const cadMarkers = [1,2,3,4,5,6,7];
-  const cadProgress = cadDayNum > 0 ? `
+  // Progress de cadência — playbook-aware
+  var cadDayNum = lead.toqueNoStage != null ? lead.toqueNoStage : (lead.diaToqueAtual || 0);
+  var cadProgress = '';
+  if (usePb && pbStage.cad.length > 0 && cadDayNum > 0) {
+    var pbTotal = pbStage.cad.length;
+    var pbLabels = pbStage.cad.map(function(c) { return c.d; });
+    cadProgress = `
+    <div style="margin-top:6px;margin-bottom:2px">
+      <div class="cp-timeline">${pbLabels.map(function(lbl,i) { return '<div class="cp-marker '+(i<cadDayNum?'done':i===cadDayNum?'active':'')+'">' + lbl + '</div>'; }).join('')}</div>
+      <div class="cp-bar"><div class="cp-fill" style="width:${Math.min(100,Math.round(cadDayNum/pbTotal*100))}%"></div></div>
+    </div>`;
+  } else if (cadDayNum > 0) {
+    // Fallback generico
+    var cadMarkers = [1,2,3,4,5,6,7];
+    cadProgress = `
     <div style="margin-top:6px;margin-bottom:2px">
       <div class="cp-timeline">${cadMarkers.map((d,i)=>`<div class="cp-marker ${i<cadDayNum?'done':i===cadDayNum?'active':''}">${['D1','D2','D4','D7','D9','D12','D30'][i]}</div>`).join('')}</div>
       <div class="cp-bar"><div class="cp-fill" style="width:${Math.min(100,Math.round(cadDayNum/7*100))}%"></div></div>
-    </div>` : '';
+    </div>`;
+  }
   const hfTouches = getTodayTouches(lead.id);
   const hfHtml = hfTouches.length>=3 ? `<div class="hf-alert">🔥 Tocado ${hfTouches.length}x hoje — cuidado com hiperfoco</div>` : '';
 
@@ -1714,13 +1851,13 @@ function buildActionCard(lead) {
   const scoreLabel = smartScore >= 75 ? '🔥' : smartScore >= 50 ? '⚡' : '·';
   return `<div class="action-card">
     <div class="ac-top">
-      <div class="ac-name">${esc(lead.nome)}${lead.fluxo&&lead.fluxo!=='FRIO'?`<span class="fluxo-badge ${lead.fluxo.toLowerCase()}" style="margin-left:6px">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>`:''}${!lead.dor?` <span title="DOR não preenchida — IA vai gerar mensagem genérica" style="color:#ef4444;font-size:11px;cursor:pointer" onclick="openEditLead('${lead.id}')">⚠ sem dor</span>`:''}
+      <div class="ac-name">${esc(lead.nome)}${lead.fluxo&&lead.fluxo!=='FRIO'?`<span class="fluxo-badge ${lead.fluxo.toLowerCase()}" style="margin-left:6px">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>`:''}${stageBadge}${!lead.dor?` <span title="DOR não preenchida — IA vai gerar mensagem genérica" style="color:#ef4444;font-size:11px;cursor:pointer" onclick="openEditLead('${lead.id}')">⚠ sem dor</span>`:''}
       </div>
       <span class="score-badge ${scoreClass}">${scoreLabel}${smartScore}</span>
       <span class="chip chip-${lead.status} ac-status-chip">${STATUS_LABELS[lead.status]}</span>
     </div>
-    ${(lead.status==='CADENCIA-ATIVA'||lead.status==='NOVO')?cadProgress:''}${hfHtml}
-    <div class="ac-action">${action}${negocScenarios}${proxAcao}</div>
+    ${(usePb||(lead.status==='CADENCIA-ATIVA'||lead.status==='NOVO'))?cadProgress:''}${hfHtml}
+    <div class="ac-action">${action}${scriptHtml}${negocScenarios}${proxAcao}</div>
     <div class="ac-btns">${btns[lead.status]||''}
       ${lead.whatsapp ? `<a class="ac-btn" href="https://wa.me/55${lead.whatsapp.replace(/\D/g,'')}" target="_blank" style="text-decoration:none">💬 WA</a>` : ''}
       <button class="ac-btn ac-btn-ai" onclick="gerarMensagem('${lead.id}')">🤖 Msg IA</button>

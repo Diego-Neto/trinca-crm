@@ -3,7 +3,7 @@
 // Cache-first para assets, network-first para API
 // ═══════════════════════════════════════════════════
 
-const CACHE_NAME = 'trinca-v4.2';
+const CACHE_NAME = 'trinca-v5.0';
 const ASSETS = [
   './',
   './index.html',
