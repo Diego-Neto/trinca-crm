@@ -567,8 +567,8 @@
 <!-- MODO FOCO -->
 <div id="focus-overlay">
   <div class="fo-header">
-    <div class="fo-brand">🎯 Modo Foco</div>
-    <button class="fo-exit" onclick="toggleFocusMode()">✕ Sair do Foco</button>
+    <div class="fo-brand" id="fo-brand-text">🎯 Modo Foco</div>
+    <button class="fo-exit" onclick="toggleFocusMode()">✕ Sair</button>
   </div>
   <div class="fo-body" id="focus-body">
     <div class="fo-empty">Nenhum lead prioritário agora.</div>
@@ -1161,56 +1161,203 @@ function toggleFocusMode() {
 }
 
 function renderFocusMode() {
-  const t = today();
-  const leads = DB.getLeads().filter(l=>!['GANHO','PERDIDO','GELADEIRA'].includes(l.status) && l._skipFocoAte !== t);
-  const withPrio = leads.map(l=>({...l,prio:getPriority(l)}));
-  const sorted = withPrio.filter(l=>l.prio==='A' || l.prio==='B').sort((a,b) => a.prio > b.prio ? 1 : -1);
-  const next = sorted[0];
-  const body = document.getElementById('focus-body');
-  if (!next) { body.innerHTML='<div class="fo-empty"><div style="font-size:36px;margin-bottom:10px">🎯</div><div style="font-weight:700">Nenhuma ação prioritária</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Pipeline em dia!</div></div>'; return; }
-  const canal = CADENCE_CANALS[Math.min((next.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
-  const canalIcon = CANAL_ICONS[canal]||'💬';
-  const nextLeads = sorted.slice(1,4);
-  const nextHtml = nextLeads.length ? `
-    <div style="margin-top:16px">
-      <div class="fo-section-label">Depois disso...</div>
-      ${nextLeads.map((l,i)=>`<div class="fo-next">
-        <div class="fo-next-num">${i+2}</div>
-        <div><div class="fo-next-name">${l.nome}</div><div class="fo-next-cta">${CANAL_ICONS[CADENCE_CANALS[Math.min((l.diaToqueAtual||0)+1,CADENCE_CANALS.length-1)]||'WHATSAPP']||'💬'} ${l.proximaAcao?l.proximaAcao.slice(0,50):'Próximo toque'}</div></div>
-      </div>`).join('')}
-    </div>` : '';
-  body.innerHTML = `
-    <div class="fo-card">
-      <div class="fo-section-label">Próxima ação agora</div>
-      <div class="fo-lead-name">${next.nome}</div>
-      ${next.dor?`<div class="fo-section-label">Dor revelada</div><div class="fo-dor">"${next.dor.slice(0,100)}"</div>`:''}
-      <div class="fo-section-label">Ação</div>
-      <button class="fo-action-btn" onclick="advanceCadence('${next.id}');renderFocusMode()">
-        ${canalIcon} ${next.proximaAcao?next.proximaAcao.slice(0,60):'Executar toque — '+CANAL_LABELS[canal]}
-      </button>
-      <div class="fo-secondary">
-        <button class="fo-sec-btn fo-nao-atendeu" onclick="focoNaoAtendeu('${next.id}')">📵 Não atendeu</button>
-        ${next.whatsapp?`<a class="fo-sec-btn" href="https://wa.me/55${next.whatsapp.replace(/\D/g,'')}" target="_blank" style="text-decoration:none">💬 WhatsApp</a>`:''}
-        <button class="fo-sec-btn" onclick="openEditLead('${next.id}')">✎ Editar</button>
-        <button class="fo-sec-btn" onclick="advanceLead('${next.id}','GELADEIRA');renderFocusMode()">❄️ Geladeira</button>
-      </div>
-    </div>
-    ${nextHtml}
-  `;
+  var t = today();
+  var body = document.getElementById('focus-body');
+  var brandEl = document.getElementById('fo-brand-text');
+
+  // --- A) Emotional State Integration ---
+  var savedState = DB.getState();
+  var phase = savedState.date === t ? getPhase(savedState.humor||7, savedState.energia||7) : null;
+
+  if (phase === 'misto') {
+    body.innerHTML = '<div class="fo-empty"><div style="font-size:36px;margin-bottom:10px">🛑</div><div style="font-weight:700">Estado Misto detectado</div><div style="font-size:12px;color:var(--muted);margin-top:6px">Modo Foco bloqueado nesse estado.<br>Cuide de você primeiro. Volte quando estabilizar.</div></div>';
+    if (brandEl) brandEl.innerHTML = '🎯 Modo Foco';
+    return;
+  }
+
+  var filterLigacao = (phase === 'depressao');
+
+  // --- E) Progress Counter ---
+  var allLeads = DB.getLeads();
+  var abLeads = allLeads.filter(function(l) {
+    if (['GANHO','PERDIDO','GELADEIRA'].includes(l.status)) return false;
+    var p = getPriority(l);
+    return p === 'A' || p === 'B';
+  });
+  var totalAB = abLeads.length;
+  var touchlog = DB.getTouchlog();
+  var doneToday = touchlog.filter(function(tl) { return tl.data === t; }).length;
+  if (brandEl) brandEl.innerHTML = '🎯 Modo Foco [' + doneToday + '/' + totalAB + ' feitos]';
+
+  var leads = allLeads.filter(function(l) { return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status) && l._skipFocoAte !== t; });
+  var withPrio = leads.map(function(l) { return Object.assign({}, l, {prio: getPriority(l)}); });
+  var sorted = withPrio.filter(function(l) { return l.prio==='A' || l.prio==='B'; }).sort(function(a,b) { return a.prio > b.prio ? 1 : -1; });
+  var next = sorted[0];
+
+  if (!next) {
+    body.innerHTML = '<div class="fo-empty"><div style="font-size:36px;margin-bottom:10px">🎯</div><div style="font-weight:700">Nenhuma ação prioritária</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Pipeline em dia!</div></div>';
+    return;
+  }
+
+  var canal = CADENCE_CANALS[Math.min((next.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+  var canalIcon = CANAL_ICONS[canal]||'💬';
+  var canalLabel = CANAL_LABELS[canal]||canal;
+
+  // --- Phase banners ---
+  var phaseBanner = '';
+  var phasePill = '';
+  if (phase === 'depressao') {
+    phaseBanner = '<div class="fo-phase-banner fo-phase-depressao">Estado baixo — só ações de texto</div>';
+    phasePill = '<span class="fo-phase-pill" style="background:#ef4444">depressão</span>';
+  } else if (phase === 'hipomaniaco') {
+    phaseBanner = '<div class="fo-phase-banner fo-phase-hipo">Estado elevado — cuidado com impulsividade</div>';
+    phasePill = '<span class="fo-phase-pill" style="background:#f59e0b">hipomaníaco</span>';
+  } else if (phase === 'funcional') {
+    phasePill = '<span class="fo-phase-pill" style="background:#64748b">funcional</span>';
+  } else if (phase === 'verde') {
+    phasePill = '<span class="fo-phase-pill" style="background:#10b981">verde</span>';
+  }
+
+  // --- B) Rich Lead Card ---
+  var statusColor = STATUS_COLORS[next.status] || 'var(--muted)';
+  var statusLabel = STATUS_LABELS[next.status] || next.status;
+  var toqueAtual = (next.diaToqueAtual || 0) + 1;
+  var totalToques = CADENCE_DAYS.length;
+  var dotsHtml = '';
+  for (var di = 1; di < totalToques; di++) {
+    dotsHtml += '<div class="fo-dot' + (di <= toqueAtual ? ' filled' : '') + '"></div>';
+  }
+
+  // Days since last contact
+  var daysAgoHtml = '';
+  if (next.ultimaAtualizacao) {
+    var diffDays = daysDiff(next.ultimaAtualizacao);
+    if (diffDays !== null) {
+      var absDays = Math.abs(diffDays);
+      daysAgoHtml = '<div class="fo-days-ago">Último contato: ' + (absDays === 0 ? 'hoje' : absDays === 1 ? 'ontem' : 'há ' + absDays + ' dias') + '</div>';
+    }
+  }
+
+  // DOR
+  var dorHtml = '';
+  if (next.dor) {
+    dorHtml = '<div class="fo-section-label">Dor revelada</div><div class="fo-dor">"' + esc(next.dor.slice(0,120)) + '"</div>';
+  } else {
+    dorHtml = '<div class="fo-dor-warning">⚠ DOR não preenchida — pergunte no próximo contato</div>';
+  }
+
+  // --- Playbook script ---
+  var scriptHtml = '';
+  if (typeof getPlaybookStage === 'function' && typeof getPlaybookICP === 'function' && typeof PB_STAGES !== 'undefined') {
+    var stageId = getPlaybookStage(next);
+    var icpId = getPlaybookICP(next);
+    var stageIdx = PB_STAGES.findIndex(function(s) { return s.id === stageId; });
+    if (stageIdx >= 0 && icpId && PB_STAGES[stageIdx].scripts && PB_STAGES[stageIdx].scripts[icpId]) {
+      var scriptText = PB_STAGES[stageIdx].scripts[icpId];
+      scriptHtml = '<div class="fo-section-label">Script sugerido</div><div class="fo-script"><span>' + esc(scriptText) + '</span><button class="fo-copy-btn" onclick="focopiarScript(this)" title="Copiar">📋</button></div>';
+    }
+  }
+
+  // Filter LIGACAO actions in depressao state
+  var actionDisabled = filterLigacao && canal === 'LIGACAO';
+  var actionBtnHtml = '';
+  if (actionDisabled) {
+    actionBtnHtml = '<button class="fo-action-btn" style="opacity:0.4;cursor:not-allowed" disabled>📞 Ligação bloqueada (estado baixo)</button>';
+  } else {
+    actionBtnHtml = '<button class="fo-action-btn" onclick="focoCardOut(function(){advanceCadence(\'' + next.id + '\');renderFocusMode()})">' + canalIcon + ' ' + (next.proximaAcao ? esc(next.proximaAcao.slice(0,60)) : 'Executar toque — ' + canalLabel) + '</button>';
+  }
+
+  // Queue
+  var nextLeads = sorted.slice(1,4);
+  var nextHtml = nextLeads.length ? '<div style="margin-top:16px"><div class="fo-section-label">Depois disso...</div>' + nextLeads.map(function(l,i) {
+    var lCanal = CADENCE_CANALS[Math.min((l.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+    return '<div class="fo-next"><div class="fo-next-num">' + (i+2) + '</div><div><div class="fo-next-name">' + esc(l.nome) + '</div><div class="fo-next-cta">' + (CANAL_ICONS[lCanal]||'💬') + ' ' + (l.proximaAcao ? esc(l.proximaAcao.slice(0,50)) : 'Próximo toque') + '</div></div></div>';
+  }).join('') + '</div>' : '';
+
+  body.innerHTML = phaseBanner + '<div class="fo-card fo-card-in" id="fo-active-card">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+      '<div class="fo-section-label" style="margin-bottom:0">Próxima ação agora</div>' +
+      phasePill +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+      '<div class="fo-lead-name" style="margin-bottom:0">' + esc(next.nome) + '</div>' +
+      '<span class="fo-status-chip" style="background:' + statusColor + '">' + statusLabel + '</span>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+      '<span style="font-size:11px;color:var(--muted)">Toque ' + toqueAtual + ' de ' + (totalToques-1) + '</span>' +
+      '<div class="fo-dots">' + dotsHtml + '</div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+      '<span style="font-size:12px">' + canalIcon + ' ' + canalLabel + '</span>' +
+      daysAgoHtml +
+    '</div>' +
+    dorHtml +
+    scriptHtml +
+    '<div class="fo-section-label">Ação</div>' +
+    actionBtnHtml +
+    '<div class="fo-secondary">' +
+      '<button class="fo-sec-btn fo-nao-atendeu" onclick="focoToggleNaoMenu(\'' + next.id + '\')">📵 Não atendeu</button>' +
+      '<button class="fo-sec-btn" onclick="gerarMensagem(\'' + next.id + '\')">🤖 Msg IA</button>' +
+      '<button class="fo-sec-btn" onclick="openEditLead(\'' + next.id + '\')">✎ Editar</button>' +
+    '</div>' +
+    '<div class="fo-nao-menu" id="fo-nao-menu-' + next.id + '" style="display:none">' +
+      (next.whatsapp ? '<button onclick="focoTentarWA(\'' + next.id + '\')">💬 WhatsApp agora</button>' : '') +
+      '<button onclick="focoNaoAtendeu(\'' + next.id + '\')">📅 Tentar amanhã</button>' +
+      '<button onclick="focoCardOut(function(){advanceLead(\'' + next.id + '\',\'GELADEIRA\');renderFocusMode()})">❄️ Geladeira</button>' +
+    '</div>' +
+  '</div>' + nextHtml;
+}
+
+function focoToggleNaoMenu(id) {
+  var menu = document.getElementById('fo-nao-menu-' + id);
+  if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+}
+
+function focoTentarWA(id) {
+  var leads = DB.getLeads();
+  var lead = leads.find(function(l) { return l.id === id; });
+  if (!lead || !lead.whatsapp) return;
+  var num = lead.whatsapp.replace(/\D/g, '');
+  window.open('https://wa.me/55' + num, '_blank');
+  logTouch(id, 'WHATSAPP', 'toque', 'wa-fallback');
+  lead.ultimaAtualizacao = today();
+  lead._skipFocoAte = today();
+  DB.saveLeads(leads);
+  focoCardOut(function() { renderFocusMode(); });
+}
+
+function focopiarScript(btn) {
+  var scriptEl = btn.parentElement.querySelector('span');
+  if (!scriptEl) return;
+  var text = scriptEl.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = '✅';
+      setTimeout(function() { btn.textContent = '📋'; }, 1500);
+    });
+  }
+}
+
+function focoCardOut(callback) {
+  var card = document.getElementById('fo-active-card');
+  if (card) {
+    card.classList.add('fo-card-out');
+    setTimeout(function() { if (callback) callback(); }, 300);
+  } else {
+    if (callback) callback();
+  }
 }
 
 function focoNaoAtendeu(id) {
-  const leads = DB.getLeads();
-  const idx = leads.findIndex(l => l.id === id);
+  var leads = DB.getLeads();
+  var idx = leads.findIndex(function(l) { return l.id === id; });
   if (idx < 0) return;
-  const canal = CADENCE_CANALS[Math.min((leads[idx].diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
-  // Registra tentativa sem avançar o dia de toque
+  var canal = CADENCE_CANALS[Math.min((leads[idx].diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
   logTouch(id, canal, 'toque', 'nao-atendeu');
   leads[idx].ultimaAtualizacao = today();
-  // Marca como "tentado hoje" para pular no Modo Foco
   leads[idx]._skipFocoAte = today();
   DB.saveLeads(leads);
-  renderFocusMode();
+  focoCardOut(function() { renderFocusMode(); });
 }
 
 // ═══════════════════════════════════════════════════
