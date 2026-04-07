@@ -2163,7 +2163,7 @@ function prevRenderMetas() {
 
 var PREV_QOS = ['','','',''];
 var PREV_Q_METAS = [0,0,0,0]; // meta trimestral em R$ (0 = não definida)
-var PREV_Q_REAL = [['','','',''],['','','',''],['','','',''],['','','','']];
+var PREV_Q_REAL = [['','','','','',''],['','','','','',''],['','','','','',''],['','','','','','']];
 
 function prevSemColor(pct) {
   if (pct<60) return {bg:'rgba(239,68,68,0.08)',c:'#ef4444',txt:'Execução falha'};
@@ -2175,19 +2175,29 @@ function prevRenderTrimestral() {
   var qi = PREV_QI;
   var meses = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]][qi];
   var diasQ = meses.reduce(function(a,m){return a+PREV_DIAS_UTEIS[m];},0);
-  var metaQ = PREV_Q_METAS[qi] || 0; // meta trimestral própria
+  var metaQ = PREV_Q_METAS[qi] || 0;
   var contratosQ = metaQ > 0 ? Math.ceil(metaQ/PREV_TICKET) : 0;
+  // Receita Previsível: pipeline coverage 3x
+  var pipelineNec = metaQ > 0 ? metaQ * 3 : 0;
+  var propostasQ = metaQ > 0 ? Math.ceil(contratosQ / 0.5) : 0;
+  var diagQ = metaQ > 0 ? Math.ceil(propostasQ / 0.4) : 0;
+  var leadsQ = metaQ > 0 ? Math.ceil(diagQ / 0.33) : 0;
   var mMeses = meses.map(function(m){
     var metaMes = metaQ > 0 ? Math.ceil(metaQ*PREV_DIAS_UTEIS[m]/diasQ) : 0;
     return {mes:PREV_MESES_F[m],dias:PREV_DIAS_UTEIS[m],meta:metaMes,contratos:metaMes > 0 ? Math.ceil(metaMes/PREV_TICKET) : 0};
   });
+  // KRs baseados em Receita Previsível (Aaron Ross)
   var krs = [
-    {n:'KR1',txt:metaQ>0?'Fechar '+contratosQ+' contratos ('+mMeses.map(function(m){return m.contratos;}).join(' → ')+')':'Fechar contratos (defina meta acima)',meta:contratosQ||1},
-    {n:'KR2',txt:'Taxa reunião → proposta acima de 40%',meta:40},
-    {n:'KR3',txt:'Show rate acima de 70%',meta:70},
-    {n:'KR4',txt:'Gerar 10+ indicações (Seeds)',meta:10}
+    {n:'KR1',txt:metaQ>0?'Receita: R$ '+prevF(metaQ)+' ('+contratosQ+' contratos: '+mMeses.map(function(m){return m.contratos;}).join('→')+')':'Receita trimestral (defina meta acima)',meta:metaQ>0?contratosQ:1,unit:'contratos'},
+    {n:'KR2',txt:metaQ>0?'Pipeline: R$ '+prevF(pipelineNec)+' (3x coverage = '+propostasQ+' propostas)':'Pipeline 3x coverage (Aaron Ross)',meta:propostasQ||1,unit:'propostas'},
+    {n:'KR3',txt:metaQ>0?'Diagnósticos: '+diagQ+' no trimestre ('+Math.ceil(diagQ/13)+'/semana)':'Diagnósticos (conv. 40% → proposta)',meta:diagQ||1,unit:'diag'},
+    {n:'KR4',txt:metaQ>0?'Leads qualificados: '+leadsQ+' (Spears '+Math.round(leadsQ*0.6)+' + Seeds '+Math.round(leadsQ*0.25)+' + Nets '+Math.round(leadsQ*0.15)+')':'Leads qualificados (Seeds/Nets/Spears)',meta:leadsQ||1,unit:'leads'},
+    {n:'KR5',txt:'Seeds gerados: 3+/mês de clientes ativos (referrals)',meta:9,unit:'seeds'},
+    {n:'KR6',txt:'Show rate acima de 70% nos diagnósticos',meta:70,unit:'%'}
   ];
   var reals = PREV_Q_REAL[qi];
+  // Ensure reals array has enough slots for 6 KRs
+  while (reals.length < 6) reals.push('');
   var pcts = krs.map(function(k,i){var r=parseFloat(reals[i])||0;return k.meta>0?Math.min(100,Math.round((r/k.meta)*100)):0;});
   var avgPct = Math.round(pcts.reduce(function(a,b){return a+b;},0)/pcts.length);
   var sem = prevSemColor(avgPct);
@@ -2195,13 +2205,17 @@ function prevRenderTrimestral() {
   document.getElementById('prev-trimestral').innerHTML =
     '<div class="prev-q-sel">'+['Q1','Q2','Q3','Q4'].map(function(q2,i){return '<button class="prev-qb'+(i===qi?' on':'')+'" onclick="PREV_QI='+i+';prevRenderTrimestral()">'+q2+'<br><span style="font-size:9px;font-weight:400">'+PREV_MESES[[[0,1,2],[3,4,5],[6,7,8],[9,10,11]][i][0]]+'–'+PREV_MESES[[[0,1,2],[3,4,5],[6,7,8],[9,10,11]][i][2]]+'</span></button>';}).join('')+'</div>'+
     '<div class="prev-slider"><label>Meta Q'+(qi+1)+' (R$)</label><input type="range" min="0" max="9000000" step="100000" value="'+(PREV_Q_METAS[qi]||0)+'" oninput="PREV_Q_METAS['+qi+']=+this.value;prevRenderTrimestral()"><span>'+(PREV_Q_METAS[qi]>0?'R$ '+prevF(PREV_Q_METAS[qi]):'Não definida')+'</span></div>'+
-    '<div class="prev-mc" style="margin-bottom:10px"><div class="prev-mc-label">Objective — Q'+(qi+1)+' 2026</div><input class="prev-okr-inp" type="text" placeholder="Ex: Construir base de pipeline previsível..." value="'+(PREV_QOS[qi]||'')+'" oninput="PREV_QOS['+qi+']=this.value" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--text);margin-top:6px"></div>'+
-    (metaQ>0?'<div class="prev-grid3">'+mMeses.map(function(m){return '<div class="prev-mc"><div class="prev-mc-label">'+m.mes+'</div><div class="prev-mc-val" style="font-size:16px">R$ '+prevF(m.meta)+'</div><div class="prev-mc-sub">'+m.dias+' dias · '+m.contratos+' contratos</div></div>';}).join('')+'</div>':'<div class="prev-info">Defina a meta trimestral acima para ver a distribuição por mês.</div>')+
-    '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — Q'+(qi+1)+'</div>'+
+    '<div class="prev-mc" style="margin-bottom:10px"><div class="prev-mc-label">Objective — Q'+(qi+1)+' 2026 (Receita Previsível)</div><input type="text" placeholder="Ex: Validar método nos 7 ICPs e construir pipeline previsível..." value="'+(PREV_QOS[qi]||'')+'" oninput="PREV_QOS['+qi+']=this.value" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--text);margin-top:6px"></div>'+
+    (metaQ>0?
+      '<div class="prev-grid3">'+mMeses.map(function(m){return '<div class="prev-mc"><div class="prev-mc-label">'+m.mes+'</div><div class="prev-mc-val" style="font-size:16px">R$ '+prevF(m.meta)+'</div><div class="prev-mc-sub">'+m.dias+' dias · '+m.contratos+' contratos</div></div>';}).join('')+'</div>'+
+      '<div class="prev-info" style="margin-bottom:10px"><strong>Receita Previsível (Aaron Ross):</strong> Pipeline coverage 3x = R$ '+prevF(pipelineNec)+' em oportunidades qualificadas. Leads: '+Math.round(leadsQ*0.6)+' Spears (prospecção ativa) + '+Math.round(leadsQ*0.25)+' Seeds (indicações) + '+Math.round(leadsQ*0.15)+' Nets (inbound). Win rate alvo: 50%.</div>'
+    :'<div class="prev-info">Defina a meta trimestral acima. A matemática reversa (Aaron Ross) calcula automaticamente: pipeline 3x, leads necessários (Seeds/Nets/Spears), diagnósticos e propostas.</div>')+
+    '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — Q'+(qi+1)+' (Receita Previsível)</div>'+
       krs.map(function(k,i){var sem2=prevSemColor(pcts[i]);return '<div class="prev-kpi-row"><div style="font-size:9px;font-weight:700;color:var(--muted);min-width:26px">'+k.n+'</div><div style="flex:1"><div class="prev-kpi-n">'+k.txt+'</div></div><input type="number" placeholder="Real" value="'+(reals[i]||'')+'" oninput="PREV_Q_REAL['+qi+']['+i+']=this.value;prevRenderTrimestral()" style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:11px;color:var(--text);text-align:right">'+(reals[i]?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;min-width:36px;text-align:center;background:'+sem2.bg+';color:'+sem2.c+'">'+pcts[i]+'%</span>':'<span style="font-size:9px;padding:2px 6px;color:var(--muted)">—</span>')+'</div>';}).join('')+
     '</div>'+
     '<div style="padding:10px 12px;border-radius:9px;border:1px solid '+sem.c+';background:'+sem.bg+';margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:500;color:'+sem.c+'">Atingimento Q'+(qi+1)+'</span><span style="font-size:20px;font-weight:500;color:'+sem.c+'">'+avgPct+'%</span></div><div style="font-size:10px;color:'+sem.c+';margin-top:3px">'+sem.txt+'</div><div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;border-radius:2px;width:'+avgPct+'%;background:'+sem.c+'"></div></div></div>'+
-    '<div class="prev-grid3"><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><strong>&lt;60%</strong><br>Execução falha.<br>Revisar imediato.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(16,185,129,0.08);color:#10b981;border:1px solid rgba(16,185,129,0.3)"><strong>60–80%</strong><br>Saudável. Meta<br>ambiciosa + real.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(249,115,22,0.08);color:#f97316;border:1px solid rgba(249,115,22,0.3)"><strong>&gt;90%</strong><br>Meta fácil demais.<br>Sobe o OKR.</div></div>';
+    '<div class="prev-grid3"><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.3)"><strong>&lt;60%</strong><br>Execução falha.<br>Revisar imediato.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(16,185,129,0.08);color:#10b981;border:1px solid rgba(16,185,129,0.3)"><strong>60–80%</strong><br>Saudável. Meta<br>ambiciosa + real.</div><div style="padding:7px;border-radius:7px;font-size:10px;text-align:center;line-height:1.4;background:rgba(249,115,22,0.08);color:#f97316;border:1px solid rgba(249,115,22,0.3)"><strong>&gt;90%</strong><br>Meta fácil demais.<br>Sobe o OKR.</div></div>'+
+    '<div style="font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6">Framework: Aaron Ross — Receita Previsível. Pipeline coverage 3x. Seeds (referrals) + Nets (inbound) + Spears (outbound). Win rate 50%. OKR G4: 60-80% é saudável.</div>';
 }
 
 function prevRenderMapa() {
