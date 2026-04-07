@@ -14,17 +14,8 @@
 <script src="logic.js"></script>
 <script src="state.js"></script>
 <script>
-// Sanitização global — protege TODOS os innerHTML automaticamente contra XSS
-(function() {
-  const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  Object.defineProperty(Element.prototype, 'innerHTML', {
-    set(value) {
-      desc.set.call(this, typeof value === 'string' ? DOMPurify.sanitize(value, { USE_PROFILES: { html: true } }) : value);
-    },
-    get() { return desc.get.call(this); },
-    configurable: true
-  });
-})();
+// XSS: esc() em logic.js sanitiza dados do usuário nos templates
+// DOMPurify disponível via window.DOMPurify para uso pontual onde necessário
 </script>
 </head>
 <body>
@@ -1134,13 +1125,13 @@ function toggleFocusMode() {
 function renderFocusMode() {
   const leads = DB.getLeads().filter(l=>!['GANHO','PERDIDO','GELADEIRA'].includes(l.status));
   const withPrio = leads.map(l=>({...l,prio:getPriority(l)}));
-  const A = withPrio.filter(l=>l.prio==='A');
-  const next = A[0] || withPrio.find(l=>l.prio==='B');
+  const sorted = withPrio.filter(l=>l.prio==='A' || l.prio==='B').sort((a,b) => a.prio > b.prio ? 1 : -1);
+  const next = sorted[0];
   const body = document.getElementById('focus-body');
   if (!next) { body.innerHTML='<div class="fo-empty"><div style="font-size:36px;margin-bottom:10px">🎯</div><div style="font-weight:700">Nenhuma ação prioritária</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Pipeline em dia!</div></div>'; return; }
   const canal = CADENCE_CANALS[Math.min((next.diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
   const canalIcon = CANAL_ICONS[canal]||'💬';
-  const nextLeads = A.slice(1,4);
+  const nextLeads = sorted.slice(1,4);
   const nextHtml = nextLeads.length ? `
     <div style="margin-top:16px">
       <div class="fo-section-label">Depois disso...</div>
