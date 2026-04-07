@@ -462,25 +462,46 @@
     <div id="tarefas-list"></div>
   </div>
 
-  <!-- ADMIN VIEW -->
+  <!-- DASHBOARD VIEW -->
   <div id="admin-view" class="view">
     <div style="margin-bottom:14px">
-      <div class="view-title" style="margin-bottom:4px">⚙️ Admin</div>
-      <div style="font-size:12px;color:var(--muted)">Backup e configurações</div>
+      <div class="view-title" style="margin-bottom:4px">📊 Dashboard</div>
+      <div style="font-size:12px;color:var(--muted)">Performance + Relatórios + Configurações</div>
     </div>
+
+    <!-- Painel do Dia -->
+    <div class="calc-box" id="dash-dia"></div>
+
+    <!-- Painel da Semana -->
+    <div class="calc-box" id="dash-semana"></div>
+
+    <!-- Painel do Mês -->
+    <div class="calc-box" id="dash-mes"></div>
+
+    <!-- Saúde do Pipeline -->
+    <div class="calc-box" id="dash-pipeline"></div>
+
+    <!-- Top Insights -->
+    <div class="calc-box" id="dash-insights"></div>
+
+    <!-- Relatórios -->
     <div class="calc-box">
-      <div class="calc-title">💾 Backup de Dados</div>
-      <p style="font-size:12px;color:var(--muted2);margin-bottom:12px">Exporte todos os seus leads, debriefs e histórico em JSON. Use para backup ou migração.</p>
-      <button class="btn-export" onclick="exportJSON()">📥 Exportar backup completo (JSON)</button>
-      <button class="btn-export" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:var(--yellow)" onclick="importJSON()">📤 Restaurar de arquivo JSON</button>
+      <div class="calc-title">📄 Relatórios</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-export" onclick="gerarRelatorio('diario')">📋 Relatório Diário</button>
+        <button class="btn-export" onclick="gerarRelatorio('semanal')">📊 Relatório Semanal</button>
+      </div>
     </div>
+
+    <!-- Configurações (antigo Admin) -->
     <div class="calc-box">
-      <div class="calc-title">📊 Estatísticas</div>
-      <div id="admin-stats"></div>
-    </div>
-    <div class="calc-box">
-      <div class="calc-title" style="color:var(--red)">⚠️ Zona de Perigo</div>
-      <button class="btn-danger" style="width:100%" onclick="clearAllData()">Limpar todos os dados</button>
+      <div class="calc-title">⚙️ Configurações</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn-export" onclick="exportJSON()">📥 Backup JSON</button>
+        <button class="btn-export" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn-export" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:var(--yellow)" onclick="importJSON()">📤 Restaurar JSON</button>
+      </div>
+      <button class="btn-danger" style="width:100%" onclick="clearAllData()">⚠️ Limpar todos os dados</button>
     </div>
   </div>
 
@@ -508,7 +529,7 @@
     <span class="nav-badge" id="tarefas-badge" style="display:none">0</span>
   </button>
   <button class="nav-btn" id="nav-admin" onclick="goto('admin')" style="position:relative">
-    <span class="icon">⚙️</span>Admin
+    <span class="icon">📊</span>Dash
   </button>
 </nav>
 
@@ -1088,19 +1109,376 @@ async function clearAllData() {
 }
 
 function renderAdmin() {
-  const leads = DB.getLeads();
-  const debriefs = DB.getDebriefs();
-  const log = DB.getTouchlog();
-  const el = document.getElementById('admin-stats');
-  if (!el) return;
-  el.innerHTML = `
-    <div class="metrics-grid">
-      <div class="metric-card"><div class="metric-label">Leads</div><div class="metric-value" style="color:var(--purple2)">${leads.length}</div></div>
-      <div class="metric-card"><div class="metric-label">Debriefs</div><div class="metric-value" style="color:var(--cyan)">${debriefs.length}</div></div>
-      <div class="metric-card"><div class="metric-label">Touchpoints</div><div class="metric-value" style="color:var(--green)">${log.length}</div></div>
-      <div class="metric-card"><div class="metric-label">Ganhos</div><div class="metric-value" style="color:var(--green)">${leads.filter(l=>l.status==='GANHO').length}</div></div>
-    </div>
-  `;
+  var leads = DB.getLeads();
+  var touchlog = DB.getTouchlog();
+  var t = today();
+  var dm = getTodayMetrics();
+  var allDaily = getDailyMetrics();
+  var savedState = DB.getState();
+  var analytics = calcAnalytics();
+
+  // ── Panel 1: Painel do Dia ──
+  var elDia = document.getElementById('dash-dia');
+  if (elDia) {
+    var last5 = allDaily.slice(-5);
+    var avgDisc = last5.length > 0 ? Math.round(last5.reduce(function(s,d){return s+(d.discagens||0);},0)/last5.length) : 0;
+    var avgAtend = last5.length > 0 ? Math.round(last5.reduce(function(s,d){return s+(d.atendidas||0);},0)/last5.length) : 0;
+    var avgDiag = last5.length > 0 ? Math.round(last5.reduce(function(s,d){return s+(d.diagnosticos||0);},0)/last5.length*10)/10 : 0;
+    var todayTouches = touchlog.filter(function(e){return e.data===t;}).length;
+    var avgTouches = last5.length > 0 ? Math.round(last5.reduce(function(s,d){return s+(d.discagens||0)+(d.wpps||0)+(d.followups||0);},0)/last5.length) : 0;
+
+    function dashCard(label, val, avg, icon) {
+      var pct = avg > 0 ? Math.round((val/avg-1)*100) : 0;
+      var cls = pct >= 0 ? 'up' : 'down';
+      var arrow = pct >= 0 ? '▲' : '▼';
+      var comparison = avg > 0 ? '<div class="dash-card-cmp '+cls+'">'+arrow+' '+Math.abs(pct)+'% vs média</div>' : '';
+      return '<div class="dash-card '+cls+'"><div class="dash-card-icon">'+icon+'</div><div class="dash-card-num">'+val+'</div><div class="dash-card-label">'+label+'</div>'+comparison+'</div>';
+    }
+
+    elDia.innerHTML = '<div class="calc-title">📅 Painel do Dia — '+formatDate(t)+'</div>' +
+      '<div class="dash-grid4">' +
+        dashCard('Discagens', dm.discagens||0, avgDisc, '📞') +
+        dashCard('Atendidas', dm.atendidas||0, avgAtend, '✅') +
+        dashCard('Diagnósticos', dm.diagnosticos||0, avgDiag, '🔬') +
+        dashCard('Interações', todayTouches, avgTouches, '⚡') +
+      '</div>';
+  }
+
+  // ── Panel 2: Painel da Semana ──
+  var elSemana = document.getElementById('dash-semana');
+  if (elSemana) {
+    var now = new Date();
+    var last7 = allDaily.filter(function(d) {
+      var dd = new Date(d.data+'T00:00:00');
+      return (now - dd) / 86400000 <= 7;
+    });
+    var semDisc = last7.reduce(function(s,d){return s+(d.discagens||0);},0);
+    var semAtend = last7.reduce(function(s,d){return s+(d.atendidas||0);},0);
+    var semDiag = last7.reduce(function(s,d){return s+(d.diagnosticos||0);},0);
+    var semProp = last7.reduce(function(s,d){return s+(d.propostas||0);},0);
+    var semSeeds = last7.reduce(function(s,d){return s+(d.seeds||0);},0);
+    var taxaAtend = semDisc > 0 ? Math.round(semAtend/semDisc*100) : 0;
+
+    var mesAtual = now.getMonth();
+    var anoAtual = now.getFullYear();
+    var contratosMes = leads.filter(function(l){
+      if (l.status !== 'GANHO' || !l.ultimaAtualizacao) return false;
+      var d = new Date(l.ultimaAtualizacao+'T00:00:00');
+      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    }).length;
+    var metaContratos = Math.ceil(PREV_META / PREV_TICKET);
+    var pctMeta = metaContratos > 0 ? Math.min(100, Math.round(contratosMes/metaContratos*100)) : 0;
+
+    elSemana.innerHTML = '<div class="calc-title">📆 Painel da Semana</div>' +
+      '<div class="dash-grid4">' +
+        '<div class="dash-card"><div class="dash-card-num">'+semDisc+'</div><div class="dash-card-label">Toques totais</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">'+taxaAtend+'%</div><div class="dash-card-label">Taxa atendimento</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">'+semDiag+'</div><div class="dash-card-label">Diagnósticos</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">'+semProp+'</div><div class="dash-card-label">Propostas</div></div>' +
+      '</div>' +
+      '<div style="margin-top:10px">' +
+        '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span>Contratos mês: '+contratosMes+'/'+metaContratos+'</span><span style="font-weight:700;color:var(--purple2)">'+pctMeta+'%</span></div>' +
+        '<div class="dash-bar"><div class="dash-bar-fill" style="width:'+pctMeta+'%;background:var(--purple)"></div></div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px">Seeds pedidos: '+semSeeds+' | Meta: R$ '+(PREV_META/1000).toFixed(0)+'k / ticket R$ '+(PREV_TICKET/1000).toFixed(0)+'k</div>';
+  }
+
+  // ── Panel 3: Painel do Mês ──
+  var elMes = document.getElementById('dash-mes');
+  if (elMes) {
+    var statusCount = {};
+    var pipelineValue = 0;
+    leads.forEach(function(l) {
+      statusCount[l.status] = (statusCount[l.status]||0) + 1;
+      if (!['GANHO','PERDIDO','GELADEIRA'].includes(l.status) && l.ticketEstimado) {
+        pipelineValue += parseFloat(l.ticketEstimado) || 0;
+      }
+    });
+    var ganhos = statusCount['GANHO'] || 0;
+    var metaC = Math.ceil(PREV_META / PREV_TICKET);
+    var pctG = metaC > 0 ? Math.min(100, Math.round(ganhos/metaC*100)) : 0;
+
+    var funnelSteps = [
+      {label:'Novos', key:'NOVO', color:'var(--s-novo)'},
+      {label:'Cadência', key:'CADENCIA-ATIVA', color:'var(--s-cadencia)'},
+      {label:'Diagnóstico', key:'AGUARDANDO-DIAGNOSTICO', color:'var(--s-diag)'},
+      {label:'Proposta', key:'PROPOSTA-ENVIADA', color:'var(--s-prop)'},
+      {label:'Ganho', key:'GANHO', color:'var(--s-ganho)'}
+    ];
+    var maxFunnel = Math.max.apply(null, funnelSteps.map(function(s){return statusCount[s.key]||0;})) || 1;
+
+    var funnelHtml = '<div style="margin-top:10px">';
+    funnelSteps.forEach(function(step) {
+      var cnt = statusCount[step.key] || 0;
+      var w = Math.max(5, Math.round(cnt/maxFunnel*100));
+      funnelHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+        '<span style="font-size:10px;color:var(--muted2);min-width:75px">'+step.label+'</span>' +
+        '<div class="dash-bar" style="flex:1"><div class="dash-bar-fill" style="width:'+w+'%;background:'+step.color+'"></div></div>' +
+        '<span style="font-size:11px;font-weight:700;min-width:24px;text-align:right">'+cnt+'</span>' +
+      '</div>';
+    });
+    funnelHtml += '</div>';
+
+    elMes.innerHTML = '<div class="calc-title">📊 Painel do Mês</div>' +
+      '<div class="dash-grid4">' +
+        '<div class="dash-card"><div class="dash-card-num">'+ganhos+'<span style="font-size:12px;color:var(--muted)"> /'+metaC+'</span></div><div class="dash-card-label">Contratos vs Meta</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">'+pctG+'%</div><div class="dash-card-label">Atingimento</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">R$ '+(pipelineValue/1000).toFixed(0)+'k</div><div class="dash-card-label">Pipeline ativo</div></div>' +
+        '<div class="dash-card"><div class="dash-card-num">'+(leads.filter(function(l){return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status);}).length)+'</div><div class="dash-card-label">Leads ativos</div></div>' +
+      '</div>' +
+      funnelHtml;
+  }
+
+  // ── Panel 4: Saúde do Pipeline ──
+  var elPipe = document.getElementById('dash-pipeline');
+  if (elPipe) {
+    var activeLeads = leads.filter(function(l){return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status);});
+    var prioA = 0, prioB = 0, prioC = 0;
+    var leadsParados = 0;
+    var totalDays = 0;
+    var semDor = 0;
+    activeLeads.forEach(function(l) {
+      var p = getPriority(l);
+      if (p === 'A') prioA++;
+      else if (p === 'B') prioB++;
+      else prioC++;
+      var diff = l.ultimaAtualizacao ? Math.abs(daysDiff(l.ultimaAtualizacao)||0) : 0;
+      if (diff > 7) leadsParados++;
+      if (l.dataCriacao) {
+        var created = new Date(l.dataCriacao+'T00:00:00');
+        totalDays += Math.max(0, Math.floor((new Date() - created)/86400000));
+      }
+      if (!l.dor && !l.dorPrincipal) semDor++;
+    });
+    var avgDays = activeLeads.length > 0 ? Math.round(totalDays/activeLeads.length) : 0;
+    var totalPrio = prioA + prioB + prioC || 1;
+
+    elPipe.innerHTML = '<div class="calc-title">🏥 Saúde do Pipeline</div>' +
+      '<div class="dash-prio-row">' +
+        '<div class="dash-prio-item" style="--prio-color:var(--red)"><span class="dash-prio-dot" style="background:var(--red)"></span><strong>'+prioA+'</strong> Quentes (A)</div>' +
+        '<div class="dash-prio-item" style="--prio-color:var(--yellow)"><span class="dash-prio-dot" style="background:var(--yellow)"></span><strong>'+prioB+'</strong> Mornos (B)</div>' +
+        '<div class="dash-prio-item" style="--prio-color:var(--muted)"><span class="dash-prio-dot" style="background:var(--muted)"></span><strong>'+prioC+'</strong> Frios (C)</div>' +
+      '</div>' +
+      '<div style="margin-top:8px;display:flex;gap:4px;height:8px;border-radius:4px;overflow:hidden">' +
+        '<div style="flex:'+prioA+';background:var(--red);min-width:'+(prioA>0?'4px':'0')+'"></div>' +
+        '<div style="flex:'+prioB+';background:var(--yellow);min-width:'+(prioB>0?'4px':'0')+'"></div>' +
+        '<div style="flex:'+prioC+';background:var(--muted);min-width:'+(prioC>0?'4px':'0')+'"></div>' +
+      '</div>' +
+      '<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<div class="dash-insight">'+(leadsParados>0?'⚠️':'✅')+' <strong>'+leadsParados+'</strong> leads parados (+7d)</div>' +
+        '<div class="dash-insight">⏱️ Média <strong>'+avgDays+'d</strong> no pipeline</div>' +
+        '<div class="dash-insight">'+(semDor>0?'🔴':'✅')+' <strong>'+semDor+'</strong> sem DOR preenchida</div>' +
+        '<div class="dash-insight">📊 <strong>'+activeLeads.length+'</strong> leads ativos</div>' +
+      '</div>';
+  }
+
+  // ── Panel 5: Top Insights ──
+  var elInsights = document.getElementById('dash-insights');
+  if (elInsights) {
+    var insightsHtml = '<div class="calc-title">💡 Top Insights</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+
+    // Best ICP
+    var bestICP = null, bestICPRate = 0;
+    Object.keys(analytics.porICP||{}).forEach(function(tag) {
+      var s = analytics.porICP[tag];
+      if (s.total >= 2) {
+        var rate = s.ganhos / s.total;
+        if (rate > bestICPRate) { bestICPRate = rate; bestICP = tag; }
+      }
+    });
+    insightsHtml += '<div class="dash-insight">🎯 Melhor ICP: <strong>'+(bestICP||'—')+'</strong>'+(bestICP?' ('+Math.round(bestICPRate*100)+'%)':'')+'</div>';
+
+    // Best channel
+    var bestCanal = null, bestCanalRate = 0;
+    Object.keys(analytics.porCanal||{}).forEach(function(c) {
+      var s = analytics.porCanal[c];
+      if (s.total >= 3) {
+        var rate = s.positivos / s.total;
+        if (rate > bestCanalRate) { bestCanalRate = rate; bestCanal = c; }
+      }
+    });
+    insightsHtml += '<div class="dash-insight">📡 Melhor canal: <strong>'+(bestCanal||'—')+'</strong>'+(bestCanal?' ('+Math.round(bestCanalRate*100)+'%)':'')+'</div>';
+
+    // Best day
+    var DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    var bestDia = null, bestDiaRate = 0;
+    Object.keys(analytics.porDia||{}).forEach(function(d) {
+      var s = analytics.porDia[d];
+      if (s.total >= 2) {
+        var rate = s.positivos / s.total;
+        if (rate > bestDiaRate) { bestDiaRate = rate; bestDia = d; }
+      }
+    });
+    insightsHtml += '<div class="dash-insight">📅 Melhor dia: <strong>'+(bestDia!==null?DIAS_SEMANA[parseInt(bestDia)]:'—')+'</strong>'+(bestDia!==null?' ('+Math.round(bestDiaRate*100)+'%)':'')+'</div>';
+
+    // Emotional state
+    var bestEstado = null, bestEstadoRate = 0;
+    Object.keys(analytics.porEstado||{}).forEach(function(k) {
+      var s = analytics.porEstado[k];
+      if (s.acoes >= 3) {
+        var rate = s.positivos / s.acoes;
+        if (rate > bestEstadoRate) { bestEstadoRate = rate; bestEstado = k; }
+      }
+    });
+    var estadoLabel = bestEstado ? bestEstado.replace('halto','H+').replace('hmedio','H~').replace('hbaixo','H-').replace('_ealto','/E+').replace('_emedio','/E~').replace('_ebaixo','/E-') : '—';
+    insightsHtml += '<div class="dash-insight">🧠 Melhor estado: <strong>'+estadoLabel+'</strong>'+(bestEstado?' ('+Math.round(bestEstadoRate*100)+'%)':'')+'</div>';
+
+    insightsHtml += '</div>';
+
+    // Current state
+    if (savedState.date === t) {
+      var phase = getPhase(savedState.humor||7, savedState.energia||7);
+      var phaseEmoji = {verde:'🟢',funcional:'🟡',hipomaniaco:'🟠',depressao:'🔴',misto:'⛔'}[phase]||'⚪';
+      insightsHtml += '<div style="margin-top:8px;padding:8px;border-radius:8px;background:var(--bg3);font-size:11px">'+phaseEmoji+' Estado atual: <strong>'+phase+'</strong> (H:'+savedState.humor+' E:'+savedState.energia+')</div>';
+    }
+
+    elInsights.innerHTML = insightsHtml;
+  }
+}
+
+// ── Relatórios ──
+function gerarRelatorio(tipo) {
+  var t = today();
+  var leads = DB.getLeads();
+  var touchlog = DB.getTouchlog();
+  var dm = getTodayMetrics();
+  var allDaily = getDailyMetrics();
+  var savedState = DB.getState();
+  var text = '';
+
+  if (tipo === 'diario') {
+    var todayTouches = touchlog.filter(function(e){return e.data===t;});
+    var activeLeads = leads.filter(function(l){return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status);});
+    var pipelineVal = 0;
+    activeLeads.forEach(function(l){ if(l.ticketEstimado) pipelineVal += parseFloat(l.ticketEstimado)||0; });
+    var statusCount = {};
+    leads.forEach(function(l){ statusCount[l.status] = (statusCount[l.status]||0)+1; });
+    var metaC = Math.ceil(PREV_META / PREV_TICKET);
+    var ganhos = statusCount['GANHO']||0;
+    var pctMeta = metaC > 0 ? Math.round(ganhos/metaC*100) : 0;
+    var taxaAtend = (dm.discagens||0) > 0 ? Math.round((dm.atendidas||0)/(dm.discagens)*100) : 0;
+
+    // Destaques: leads com toque hoje
+    var destaquesIds = {};
+    todayTouches.forEach(function(e){ if(e.leadId) destaquesIds[e.leadId] = true; });
+    var destaques = leads.filter(function(l){ return destaquesIds[l.id]; }).map(function(l){ return l.nome + ' (' + l.status + ')'; });
+
+    var phase = savedState.date === t ? getPhase(savedState.humor||7, savedState.energia||7) : '—';
+
+    text = '📊 RELATÓRIO DIÁRIO — ' + formatDate(t) + '\n' +
+      'Diego Rodrigues | Realize Consórcios\n\n' +
+      '📞 ATIVIDADE:\n' +
+      '• Discagens: '+(dm.discagens||0)+' | Atendidas: '+(dm.atendidas||0)+' ('+taxaAtend+'%)\n' +
+      '• WhatsApps: '+(dm.wpps||0)+' | Follow-ups: '+(dm.followups||0)+'\n' +
+      '• Diagnósticos: '+(dm.diagnosticos||0)+' | Propostas: '+(dm.propostas||0)+'\n' +
+      '• Seeds pedidos: '+(dm.seeds||0)+'\n\n' +
+      '📋 PIPELINE:\n' +
+      '• Ativos: '+activeLeads.length+' leads (R$ '+(pipelineVal/1000).toFixed(0)+'k)\n' +
+      '• Novos: '+(statusCount['NOVO']||0)+' | Cadência: '+(statusCount['CADENCIA-ATIVA']||0)+' | Diag: '+(statusCount['AGUARDANDO-DIAGNOSTICO']||0)+' | Proposta: '+(statusCount['PROPOSTA-ENVIADA']||0)+'\n' +
+      '• Contratos mês: '+ganhos+'/'+metaC+' ('+pctMeta+'%)\n\n' +
+      '⚡ DESTAQUES:\n' +
+      (destaques.length > 0 ? destaques.map(function(d){ return '• '+d; }).join('\n') : '• Nenhum destaque hoje') + '\n\n' +
+      '🧠 Estado: '+phase+' (H:'+(savedState.humor||'—')+' E:'+(savedState.energia||'—')+')';
+
+  } else if (tipo === 'semanal') {
+    var now = new Date();
+    var last7 = allDaily.filter(function(d) {
+      var dd = new Date(d.data+'T00:00:00');
+      return (now - dd) / 86400000 <= 7;
+    });
+    var prev7 = allDaily.filter(function(d) {
+      var dd = new Date(d.data+'T00:00:00');
+      var diff = (now - dd) / 86400000;
+      return diff > 7 && diff <= 14;
+    });
+    var semDisc = last7.reduce(function(s,d){return s+(d.discagens||0);},0);
+    var semAtend = last7.reduce(function(s,d){return s+(d.atendidas||0);},0);
+    var semDiag = last7.reduce(function(s,d){return s+(d.diagnosticos||0);},0);
+    var semProp = last7.reduce(function(s,d){return s+(d.propostas||0);},0);
+    var semSeeds = last7.reduce(function(s,d){return s+(d.seeds||0);},0);
+    var semWpp = last7.reduce(function(s,d){return s+(d.wpps||0);},0);
+    var semFup = last7.reduce(function(s,d){return s+(d.followups||0);},0);
+
+    var prevDisc = prev7.reduce(function(s,d){return s+(d.discagens||0);},0);
+    var prevAtend = prev7.reduce(function(s,d){return s+(d.atendidas||0);},0);
+    var prevDiag = prev7.reduce(function(s,d){return s+(d.diagnosticos||0);},0);
+
+    function cmpWeek(atual, anterior) {
+      if (anterior === 0) return '';
+      var pct = Math.round((atual/anterior-1)*100);
+      return pct >= 0 ? ' (▲'+pct+'%)' : ' (▼'+Math.abs(pct)+'%)';
+    }
+
+    var activeLeads2 = leads.filter(function(l){return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status);});
+    var pipeVal2 = 0;
+    activeLeads2.forEach(function(l){ if(l.ticketEstimado) pipeVal2 += parseFloat(l.ticketEstimado)||0; });
+    var statusCount2 = {};
+    leads.forEach(function(l){ statusCount2[l.status] = (statusCount2[l.status]||0)+1; });
+    var metaC2 = Math.ceil(PREV_META / PREV_TICKET);
+    var ganhos2 = statusCount2['GANHO']||0;
+
+    text = '📊 RELATÓRIO SEMANAL — Semana de ' + formatDate(t) + '\n' +
+      'Diego Rodrigues | Realize Consórcios\n\n' +
+      '📞 ATIVIDADE DA SEMANA:\n' +
+      '• Discagens: '+semDisc+cmpWeek(semDisc,prevDisc)+'\n' +
+      '• Atendidas: '+semAtend+(semDisc>0?' ('+Math.round(semAtend/semDisc*100)+'%)':'')+cmpWeek(semAtend,prevAtend)+'\n' +
+      '• WhatsApps: '+semWpp+' | Follow-ups: '+semFup+'\n' +
+      '• Diagnósticos: '+semDiag+cmpWeek(semDiag,prevDiag)+'\n' +
+      '• Propostas: '+semProp+' | Seeds: '+semSeeds+'\n\n' +
+      '📋 PIPELINE:\n' +
+      '• Ativos: '+activeLeads2.length+' leads (R$ '+(pipeVal2/1000).toFixed(0)+'k)\n' +
+      '• Novos: '+(statusCount2['NOVO']||0)+' | Cadência: '+(statusCount2['CADENCIA-ATIVA']||0)+' | Diag: '+(statusCount2['AGUARDANDO-DIAGNOSTICO']||0)+' | Proposta: '+(statusCount2['PROPOSTA-ENVIADA']||0)+'\n' +
+      '• Contratos acumulados: '+ganhos2+'/'+metaC2+' ('+Math.round(ganhos2/metaC2*100)+'%)\n\n' +
+      '📈 TENDÊNCIA:\n' +
+      '• Discagens vs semana anterior: '+cmpWeek(semDisc,prevDisc)+'\n' +
+      '• Atendidas vs semana anterior: '+cmpWeek(semAtend,prevAtend)+'\n' +
+      '• Diagnósticos vs semana anterior: '+cmpWeek(semDiag,prevDiag);
+  }
+
+  // Open modal with preview
+  var modal = document.getElementById('relatorio-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'relatorio-modal';
+    modal.className = 'modal-bg';
+    modal.innerHTML = '<div class="modal-box" style="max-width:520px"><div class="modal-header"><div class="modal-title">📄 Relatório</div><button class="modal-close" onclick="fecharRelatorio()">✕</button></div><pre id="relatorio-preview" style="white-space:pre-wrap;font-size:12px;color:var(--text);background:var(--bg3);padding:12px;border-radius:8px;max-height:50vh;overflow-y:auto;font-family:inherit;line-height:1.6"></pre><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn-export" onclick="copiarRelatorio()" style="flex:1">📋 Copiar</button><button class="btn-export" onclick="imprimirRelatorio()" style="flex:1">🖨️ Imprimir</button><button class="btn-export" id="btn-share-rel" onclick="compartilharRelatorio()" style="flex:1;display:none">📤 Compartilhar</button></div></div>';
+    document.body.appendChild(modal);
+  }
+  document.getElementById('relatorio-preview').textContent = text;
+  modal.classList.add('open');
+  modal.setAttribute('data-text', text);
+  if (navigator.share) {
+    document.getElementById('btn-share-rel').style.display = '';
+  }
+}
+
+function fecharRelatorio() {
+  var modal = document.getElementById('relatorio-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function copiarRelatorio() {
+  var modal = document.getElementById('relatorio-modal');
+  var text = modal ? modal.getAttribute('data-text') : '';
+  navigator.clipboard.writeText(text).then(function() {
+    showToast('📋 Relatório copiado!');
+  });
+}
+
+function imprimirRelatorio() {
+  var text = document.getElementById('relatorio-preview').textContent;
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Relatório</title><style>body{font-family:monospace;white-space:pre-wrap;padding:24px;font-size:13px;line-height:1.7}@media print{body{font-size:11px}}</style></head><body>'+text.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</body></html>');
+  win.document.close();
+  win.print();
+}
+
+function compartilharRelatorio() {
+  var modal = document.getElementById('relatorio-modal');
+  var text = modal ? modal.getAttribute('data-text') : '';
+  if (navigator.share) {
+    navigator.share({title:'Relatório CRM', text:text});
+  }
 }
 
 // ═══════════════════════════════════════════════════
