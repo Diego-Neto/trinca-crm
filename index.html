@@ -1123,7 +1123,8 @@ function toggleFocusMode() {
 }
 
 function renderFocusMode() {
-  const leads = DB.getLeads().filter(l=>!['GANHO','PERDIDO','GELADEIRA'].includes(l.status));
+  const t = today();
+  const leads = DB.getLeads().filter(l=>!['GANHO','PERDIDO','GELADEIRA'].includes(l.status) && l._skipFocoAte !== t);
   const withPrio = leads.map(l=>({...l,prio:getPriority(l)}));
   const sorted = withPrio.filter(l=>l.prio==='A' || l.prio==='B').sort((a,b) => a.prio > b.prio ? 1 : -1);
   const next = sorted[0];
@@ -1150,13 +1151,28 @@ function renderFocusMode() {
         ${canalIcon} ${next.proximaAcao?next.proximaAcao.slice(0,60):'Executar toque — '+CANAL_LABELS[canal]}
       </button>
       <div class="fo-secondary">
-        <button class="fo-sec-btn" onclick="openEditLead('${next.id}')">✎ Editar Lead</button>
+        <button class="fo-sec-btn fo-nao-atendeu" onclick="focoNaoAtendeu('${next.id}')">📵 Não atendeu</button>
         ${next.whatsapp?`<a class="fo-sec-btn" href="https://wa.me/55${next.whatsapp.replace(/\D/g,'')}" target="_blank" style="text-decoration:none">💬 WhatsApp</a>`:''}
+        <button class="fo-sec-btn" onclick="openEditLead('${next.id}')">✎ Editar</button>
         <button class="fo-sec-btn" onclick="advanceLead('${next.id}','GELADEIRA');renderFocusMode()">❄️ Geladeira</button>
       </div>
     </div>
     ${nextHtml}
   `;
+}
+
+function focoNaoAtendeu(id) {
+  const leads = DB.getLeads();
+  const idx = leads.findIndex(l => l.id === id);
+  if (idx < 0) return;
+  const canal = CADENCE_CANALS[Math.min((leads[idx].diaToqueAtual||0)+1, CADENCE_CANALS.length-1)] || 'WHATSAPP';
+  // Registra tentativa sem avançar o dia de toque
+  logTouch(id, canal, 'toque', 'nao-atendeu');
+  leads[idx].ultimaAtualizacao = today();
+  // Marca como "tentado hoje" para pular no Modo Foco
+  leads[idx]._skipFocoAte = today();
+  DB.saveLeads(leads);
+  renderFocusMode();
 }
 
 // ═══════════════════════════════════════════════════

@@ -656,6 +656,8 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .fo-secondary{display:flex;gap:8px}
 .fo-sec-btn{flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
 .fo-sec-btn:hover{border-color:var(--purple);color:var(--purple2)}
+.fo-nao-atendeu{border-color:rgba(239,68,68,0.3);color:#fca5a5}
+.fo-nao-atendeu:hover{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.1)}
 .fo-empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .fo-next{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
 .fo-next-num{width:24px;height:24px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
