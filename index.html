@@ -48,6 +48,13 @@
 <div id="main">
   <!-- PIPELINE -->
   <div id="pipeline-view" class="view">
+    <div class="pipeline-filters">
+      <button class="filter-btn active" onclick="filterPipeline('all')">Todos</button>
+      <button class="filter-btn" onclick="filterPipeline('prioA')">🔴 Prioridade A</button>
+      <button class="filter-btn" onclick="filterPipeline('today')">⚡ Toque Hoje</button>
+      <button class="filter-btn" onclick="filterPipeline('late')">⏰ Atrasados</button>
+      <input class="filter-search" placeholder="🔍 Buscar lead..." oninput="filterPipeline('search', this.value)">
+    </div>
     <div id="pipeline-content"></div>
   </div>
 
@@ -438,8 +445,8 @@
       <div class="form-row">
         <input class="form-input" id="tf-titulo" placeholder="Ex: Ligar pra Ana Paula sobre proposta">
       </div>
-      <div class="form-row-2">
-        <div class="form-row" style="margin-bottom:0">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div>
           <label class="form-label">Tipo</label>
           <select class="form-select" id="tf-tipo">
             <option value="ligar">📞 Ligar</option>
@@ -448,9 +455,13 @@
             <option value="tarefa">✅ Tarefa</option>
           </select>
         </div>
-        <div class="form-row" style="margin-bottom:0">
+        <div>
           <label class="form-label">Data</label>
           <input class="form-input" type="date" id="tf-data">
+        </div>
+        <div>
+          <label class="form-label">Hora</label>
+          <input class="form-input" type="time" id="tf-hora">
         </div>
       </div>
       <div class="form-row">
@@ -797,7 +808,30 @@ function getAlerts() {
   const reactAlerts = checkReactivations();
   reactAlerts.forEach(r=>alerts.push({type:'yellow',title:`❄️ ${r.lead.nome} — ${r.dia} na geladeira`,desc:`Hora de reativar! ${r.lead.ganchoReativacao||''}`.slice(0,80)}));
 
+  // Ordenar por severidade (red > purple > yellow > green)
+  const sevOrder = {red: 0, purple: 1, yellow: 2, green: 3};
+  alerts.sort((a, b) => (sevOrder[a.type] || 3) - (sevOrder[b.type] || 3));
   return alerts;
+}
+
+// ── Snooze de Alertas ──
+function getSnoozedAlerts() {
+  try { return JSON.parse(localStorage.getItem('tc_snoozed_alerts') || '[]'); } catch(e) { return []; }
+}
+function snoozeAlert(alertTitle) {
+  var snoozed = getSnoozedAlerts();
+  var until = new Date(); until.setDate(until.getDate() + 1);
+  snoozed.push({ title: alertTitle, until: until.toISOString().slice(0, 10) });
+  localStorage.setItem('tc_snoozed_alerts', JSON.stringify(snoozed));
+  renderAlerts();
+  showToast('Alerta silenciado por 24h 💤');
+}
+function isAlertSnoozed(alertTitle) {
+  var snoozed = getSnoozedAlerts();
+  var t = today();
+  snoozed = snoozed.filter(function(s) { return s.until >= t; });
+  localStorage.setItem('tc_snoozed_alerts', JSON.stringify(snoozed));
+  return snoozed.some(function(s) { return s.title === alertTitle; });
 }
 
 // ═══════════════════════════════════════════════════
@@ -1760,6 +1794,8 @@ function focoNaoAtendeu(id) {
 // ROUTING
 // ═══════════════════════════════════════════════════
 let currentView = 'pipeline';
+let pipelineFilter = 'all';
+let pipelineSearchTerm = '';
 
 function goto(view) {
   currentView = view;
@@ -1896,19 +1932,53 @@ function toggleFw(id) {
 // ═══════════════════════════════════════════════════
 // PIPELINE
 // ═══════════════════════════════════════════════════
+function filterPipeline(type, value) {
+  pipelineFilter = type;
+  if (type === 'search') pipelineSearchTerm = (value || '').toLowerCase();
+  // Update active button
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (type !== 'search') {
+    const labels = {all:'Todos', prioA:'Prioridade A', today:'Toque Hoje', late:'Atrasados'};
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      if (b.textContent.includes(labels[type] || '')) b.classList.add('active');
+    });
+  }
+  renderPipeline();
+}
+
 function renderPipeline() {
   const leads = DB.getLeads();
   let html = '<div class="kanban-scroll">';
   STATUSES.forEach(status => {
     const cols = leads.filter(l => l.status === status);
+    // Aplicar filtro ativo
+    let filtered = cols;
+    if (pipelineFilter === 'prioA') filtered = cols.filter(l => getPriority(l) === 'A');
+    else if (pipelineFilter === 'today') filtered = cols.filter(l => { const nt = l.proximoToque || calcNextTouch(l); return nt && daysDiff(nt) === 0; });
+    else if (pipelineFilter === 'late') filtered = cols.filter(l => { const nt = l.proximoToque || calcNextTouch(l); return nt && daysDiff(nt) < 0; });
+    else if (pipelineFilter === 'search' && pipelineSearchTerm) filtered = cols.filter(l => l.nome.toLowerCase().includes(pipelineSearchTerm));
+    // Sort por prioridade dentro da coluna
+    const prioOrder = {A: 0, B: 1, C: 2};
+    filtered.sort((a, b) => {
+      const pa = prioOrder[getPriority(a)] || 2;
+      const pb = prioOrder[getPriority(b)] || 2;
+      if (pa !== pb) return pa - pb;
+      const na = a.proximoToque || calcNextTouch(a);
+      const nb = b.proximoToque || calcNextTouch(b);
+      if (na && nb) return na.localeCompare(nb);
+      return na ? -1 : 1;
+    });
+    // Valor total da coluna (sobre leads filtrados)
+    const colValue = filtered.reduce((sum, l) => sum + (parseFloat(l.ticketEstimado) || 0), 0);
     html += `<div class="kanban-col">
       <div class="col-header">
         <div class="col-dot" style="background:${STATUS_COLORS[status]}"></div>
         <div class="col-name" style="color:${STATUS_COLORS[status]}">${STATUS_LABELS[status]}</div>
-        <div class="col-count">${cols.length}</div>
+        <div class="col-count">${filtered.length}</div>
+        ${colValue > 0 ? `<div class="col-value">R$ ${(colValue/1000).toFixed(0)}k</div>` : ''}
       </div>
       <div class="col-body">`;
-    cols.forEach(lead => {
+    filtered.forEach(lead => {
       const prio = getPriority(lead);
       const nt = lead.proximoToque || calcNextTouch(lead);
       const diff = nt ? daysDiff(nt) : null;
@@ -1935,6 +2005,7 @@ function renderPipeline() {
         ${lead.status==='AGUARDANDO-DIAGNOSTICO' && lead.dataHoraDiagnostico ? `<div class="lc-touch ${lead.dataHoraDiagnostico.startsWith(today())?'today':''}">📅 ${lead.dataHoraDiagnostico.slice(0,10)}</div>` : ''}
         ${lead.pilarFraco ? `<div class="lc-pilar">⚠ Fraco: ${esc(lead.pilarFraco)}</div>` : ''}
         ${lead.ticketEstimado ? `<div class="lc-ticket">R$ ${(lead.ticketEstimado/1000).toFixed(0)}k${parcelaStr}</div>` : ''}
+        ${lead.ultimoDebrief ? `<div class="lc-debrief">📝 ${lead.ultimoDebriefScore||'?'}/10 · ${lead.ultimoDebrief}</div>` : ''}
         ${lead.motivoPerdido && lead.status==='PERDIDO' ? `<div style="font-size:10px;color:var(--red);margin-top:3px">${esc(lead.motivoPerdido.slice(0,45))}</div>` : ''}
       </div>`;
     });
@@ -2025,7 +2096,7 @@ function renderHojeHeader() {
   // C) Alertas inline
   var alertasEl = document.getElementById('hoje-alertas');
   if (alertasEl) {
-    var alerts = getAlerts();
+    var alerts = getAlerts().filter(function(a){ return !isAlertSnoozed(a.title); });
     if (alerts.length > 0) {
       var alertColorMap = {purple: 'var(--purple)', yellow: 'var(--yellow)', red: 'var(--red)'};
       var alertsHtml = alerts.map(function(a) {
@@ -2067,6 +2138,32 @@ function renderCadencia() {
 
   const insight = getInsightText();
   let html = insight ? `<div class="insight-strip"><span class="insight-lbl">🧠 IA</span>${insight.map(c=>`<span class="insight-chip ${c.type==='green'?'green':c.type==='yellow'?'yellow':''}">${c.text}</span>`).join('')}</div>` : '';
+
+  // Sprint Verde — quando estado é verde, mostrar fila de ligações
+  const savedSt = DB.getState();
+  const isVerde = savedSt.date === today() && (savedSt.phase || getPhase(savedSt.humor||7, savedSt.energia||7)) === 'verde';
+  if (isVerde && A.length > 0) {
+    const sprintLeads = A.filter(l => { const nt = l.proximoToque || calcNextTouch(l); const d = nt ? daysDiff(nt) : null; return d !== null && d <= 0; });
+    if (sprintLeads.length > 0) {
+      html += `<div class="sprint-verde-box">
+        <div class="sprint-verde-header">
+          <span>🟢 Sprint Verde — ${sprintLeads.length} ligações prioritárias</span>
+          <button class="btn-sec" style="padding:4px 10px;font-size:11px" onclick="toggleFocusMode()">🎯 Modo Foco</button>
+        </div>
+        <div class="sprint-verde-desc">Você está no ponto. Blocos de 45min, prioridade A primeiro.</div>
+        <div class="sprint-verde-list">`;
+      sprintLeads.forEach((l, i) => {
+        html += `<div class="sprint-lead-item" onclick="openEditLead('${l.id}')">
+          <span class="sprint-num">${i+1}</span>
+          <span class="sprint-name">${esc(l.nome)}</span>
+          ${l.dor ? `<span class="sprint-dor">${esc(l.dor.slice(0,30))}${l.dor.length>30?'…':''}</span>` : ''}
+          ${l.whatsapp ? `<a class="sprint-call" href="tel:+55${l.whatsapp.replace(/\\D/g,'')}" onclick="event.stopPropagation()">📞</a>` : ''}
+        </div>`;
+      });
+      html += `</div></div>`;
+    }
+  }
+
   if (A.length === 0 && B.length === 0 && C.length === 0) {
     html = `<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Pipeline vazio</div><div class="empty-sub">Adicione leads pelo Pipeline</div></div>`;
   }
@@ -2942,14 +3039,24 @@ function saveDebrief() {
     tdahDesviou: document.getElementById('db-6').value,
     proximaAcao: document.getElementById('db-7').value,
   };
+  // Calcular score do debrief
+  const score = calcDebriefScore(debrief);
+  debrief.score = score;
+
   const debriefs = DB.getDebriefs();
   debriefs.unshift(debrief);
   if (debriefs.length > 100) debriefs.pop();
   DB.saveDebriefs(debriefs);
 
-  if (leadId && debrief.pilarFraco) {
+  // Atualizar lead com info do debrief
+  if (leadId) {
     const idx = leads.findIndex(l => l.id === leadId);
-    if (idx >= 0) { leads[idx].pilarFraco = debrief.pilarFraco; DB.saveLeads(leads); }
+    if (idx >= 0) {
+      if (debrief.pilarFraco) leads[idx].pilarFraco = debrief.pilarFraco;
+      leads[idx].ultimoDebrief = today();
+      leads[idx].ultimoDebriefScore = score;
+      DB.saveLeads(leads);
+    }
   }
 
   ['db-1','db-2','db-3','db-4','db-5','db-6','db-7'].forEach(id => {
@@ -2957,7 +3064,8 @@ function saveDebrief() {
     if (el) el.tagName === 'TEXTAREA' ? el.value = '' : el.selectedIndex = 0;
   });
   renderDebriefHistory();
-  alert('Debrief salvo!');
+  const scoreEmoji = score >= 8 ? '⭐' : score >= 5 ? '👍' : '⚠️';
+  alert(`Debrief salvo! Score: ${score}/10 ${scoreEmoji}`);
 }
 
 function populateLeadSelect() {
@@ -2985,6 +3093,41 @@ function updateDebriefPreview() {
   `;
 }
 
+function calcDebriefScore(d) {
+  var score = 10;
+  var vel = d.velocidadePensamento || '';
+  if (vel.startsWith('1') || vel.startsWith('5')) score -= 2;
+  else if (vel.startsWith('2') || vel.startsWith('4')) score -= 1;
+  var prom = d.promessaIndevida || '';
+  if (prom && !prom.startsWith('Nao')) score -= 2;
+  if (d.pilarFraco && d.pilarFraco !== '') score -= 1;
+  var grand = d.grandiosidade || '';
+  if (grand.includes('perdi o fio')) score -= 3;
+  else if (grand.includes('prometi mais')) score -= 2;
+  else if (grand.includes('Levemente')) score -= 1;
+  return Math.max(1, Math.min(10, score));
+}
+
+function renderDebriefTrend() {
+  var debriefs = DB.getDebriefs();
+  if (debriefs.length < 2) return '';
+  var last5 = debriefs.slice(0, 5);
+  var scores = last5.map(function(d) { return d.score || calcDebriefScore(d); });
+  var avg = scores.reduce(function(a, b) { return a + b; }, 0) / scores.length;
+  var trend = scores.length >= 2 ? scores[0] - scores[scores.length - 1] : 0;
+  var trendIcon = trend > 0 ? '📈' : trend < 0 ? '📉' : '➡️';
+  var bars = scores.reverse().map(function(s) {
+    var h = Math.round(s * 10);
+    var col = s >= 8 ? 'var(--green)' : s >= 5 ? 'var(--yellow)' : 'var(--red)';
+    return '<div class="trend-bar" style="height:' + h + '%;background:' + col + '" title="' + s + '/10"></div>';
+  }).join('');
+  return '<div class="debrief-trend">' +
+    '<div class="trend-header">' + trendIcon + ' Tendência últimas ' + scores.length + ' ligações</div>' +
+    '<div class="trend-avg">Média: <strong>' + avg.toFixed(1) + '/10</strong></div>' +
+    '<div class="trend-chart">' + bars + '</div>' +
+    '</div>';
+}
+
 function renderDebriefHistory() {
   const debriefs = DB.getDebriefs().slice(0, 10);
   const el = document.getElementById('debrief-history');
@@ -2993,12 +3136,16 @@ function renderDebriefHistory() {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">Nenhum debrief ainda</div>';
     return;
   }
-  el.innerHTML = debriefs.map(d => {
+  // Tendência no topo
+  const trendHtml = renderDebriefTrend();
+  el.innerHTML = trendHtml + debriefs.map(d => {
     const ph = d.phase ? PHASES[d.phase] : null;
     const warn = d.promessaIndevida && d.promessaIndevida !== 'Nao — me mantive no script';
     const grand = d.grandiosidade && !d.grandiosidade.startsWith('Nao');
+    const sc = d.score || calcDebriefScore(d);
+    const scClass = sc >= 8 ? 'good' : sc >= 5 ? 'mid' : 'bad';
     return `<div class="dh-item">
-      <div class="dh-date">${d.date} — ${d.leadNome}${ph ? ` <span style="color:${ph.color};font-weight:700">${ph.emoji} ${ph.label}</span>` : ''}</div>
+      <div class="dh-date">${d.date} — ${d.leadNome}<span class="debrief-score ${scClass}">${sc}/10</span>${ph ? ` <span style="color:${ph.color};font-weight:700">${ph.emoji} ${ph.label}</span>` : ''}</div>
       ${d.pilarFraco && d.pilarFraco !== 'Nenhum — todos solidos' ? `<div class="dh-pilar">Pilar fraco: ${d.pilarFraco}</div>` : ''}
       ${warn ? `<div style="color:var(--orange);margin-top:3px;font-size:11px">Promessa: ${d.promessaIndevida}</div>` : ''}
       ${grand ? `<div style="color:var(--orange);margin-top:2px;font-size:11px">Grandiosidade: ${d.grandiosidade}</div>` : ''}
@@ -3210,21 +3357,28 @@ function toggleAlerts() {
 }
 
 function renderAlerts() {
-  const alerts = getAlerts();
+  const alerts = getAlerts().filter(a => !isAlertSnoozed(a.title));
   const list = document.getElementById('alerts-list');
   if (alerts.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Tudo em ordem</div><div class="empty-sub">Nenhum alerta ativo</div></div>';
     return;
   }
+  const sevIcon = {red:'🔴', purple:'🟣', yellow:'🟡', green:'🟢'};
   list.innerHTML = alerts.map(a => `
     <div class="alert-item ${a.type}">
-      <div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div>
+      <div>
+        <div class="alert-title"><span class="alert-sev-icon">${sevIcon[a.type]||'⚪'}</span>${a.title}</div>
+        <div class="alert-desc">${a.desc}</div>
+        <div class="alert-actions-row">
+          <button class="alert-snooze-btn" onclick="snoozeAlert('${a.title.replace(/'/g,"\\'")}')">💤 Snooze 1d</button>
+        </div>
+      </div>
     </div>
   `).join('');
 }
 
 function updateBadges() {
-  const alerts = getAlerts();
+  const alerts = getAlerts().filter(a => !isAlertSnoozed(a.title));
   const count = alerts.length;
   const alertEl = document.getElementById('alert-count');
   if (alertEl) {
@@ -3862,7 +4016,30 @@ function getInsightText() {
 // ═══════════════════════════════════════════════════
 const TIPO_ICONS = {ligar:'📞', whatsapp:'💬', reuniao:'📅', tarefa:'✅'};
 
+function autoGenerateCadenciaTasks() {
+  var leads = DB.getLeads();
+  var tasks = DB.getTasks();
+  var t = today();
+  var changed = false;
+  leads.forEach(function(l) {
+    if (['GANHO','PERDIDO','GELADEIRA'].includes(l.status)) return;
+    var nt = l.proximoToque || calcNextTouch(l);
+    if (!nt) return;
+    var diff = daysDiff(nt);
+    if (diff !== null && diff <= 0 && diff >= -1) {
+      var autoExists = tasks.some(function(t2) { return t2.leadId === l.id && t2.data === t && t2.autoGen; });
+      if (!autoExists) {
+        tasks.push({ id: uuid(), titulo: 'Toque: ' + l.nome, tipo: 'ligar', data: t, hora: null, leadId: l.id, prio: getPriority(l), done: false, criadoEm: t, autoGen: true });
+        changed = true;
+      }
+    }
+  });
+  if (changed) DB.saveTasks(tasks);
+}
+
 function renderTarefas() {
+  // Auto-gerar tarefas da cadência
+  autoGenerateCadenciaTasks();
   // Preenche select de leads
   const sel = document.getElementById('tf-lead');
   if (sel) {
@@ -3881,7 +4058,8 @@ function renderTarefas() {
     updateTaskBadge(); return;
   }
 
-  const sorted = [...tasks].sort((a,b)=>{ if (a.done !== b.done) return a.done?1:-1; return (a.data||'z') > (b.data||'z')?1:-1; });
+  const prioOrder = {A:0, B:1, C:2};
+  const sorted = [...tasks].sort((a,b)=>{ if (a.done !== b.done) return a.done?1:-1; const pa=prioOrder[a.prio]||2, pb=prioOrder[b.prio]||2; if(pa!==pb) return pa-pb; if((a.data||'z')!==(b.data||'z')) return (a.data||'z')>(b.data||'z')?1:-1; if(a.hora&&b.hora) return a.hora.localeCompare(b.hora); return a.hora?-1:1; });
   const groups = {};
   sorted.forEach(t=>{ const k=t.data||'sem-data'; if(!groups[k])groups[k]=[]; groups[k].push(t); });
 
@@ -3901,10 +4079,13 @@ function renderTarefas() {
       const waBtn = t.tipo==='whatsapp' && phone ? `<a class="task-action-btn" href="https://wa.me/55${phone}" target="_blank">💬</a>` : '';
       const telBtn = t.tipo==='ligar' && phone ? `<a class="task-action-btn" href="tel:+55${phone}">📞</a>` : '';
       const gcalBtn = t.tipo==='reuniao' && t.data ? `<a class="task-action-btn" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((t.titulo)+(lead?' — '+lead.nome:''))}&dates=${t.data.replace(/-/g,'')}/${t.data.replace(/-/g,'')}" target="_blank">📅</a>` : '';
+      const prioEmoji = t.prio==='A'?'🔴':t.prio==='B'?'🟡':'⚪';
+      const horaStr = t.hora ? `<span class="tarefa-hora">${t.hora}</span>` : '';
+      const autoBadge = t.autoGen ? '<span class="tarefa-auto-badge">⚡ Auto</span>' : '';
       html += `<div class="task-item${t.done?' task-done':''}">
         <button class="task-check-btn" onclick="toggleTarefa('${t.id}')">${t.done?'✅':'⬜'}</button>
         <div class="task-info">
-          <div class="task-title">${TIPO_ICONS[t.tipo]||'✅'} ${t.titulo}</div>
+          <div class="task-title"><span class="tarefa-prio">${prioEmoji}</span>${TIPO_ICONS[t.tipo]||'✅'} ${t.titulo}${autoBadge}${horaStr}</div>
           ${lead?`<div class="task-lead">${esc(lead.nome)}</div>`:''}
         </div>
         <div class="task-actions">${waBtn}${telBtn}${gcalBtn}<button class="task-action-btn" onclick="deleteTarefa('${t.id}')">✕</button></div>
@@ -3920,11 +4101,15 @@ function addTarefa() {
   const titulo = document.getElementById('tf-titulo')?.value?.trim();
   if (!titulo) { alert('Escreva o título da tarefa'); return; }
   const tasks = DB.getTasks();
+  const leadId = document.getElementById('tf-lead')?.value||null;
+  let prio = 'C';
+  if (leadId) { const lead = DB.getLeads().find(l=>l.id===leadId); if (lead) prio = getPriority(lead); }
   tasks.push({
     id: uuid(), titulo,
     tipo: document.getElementById('tf-tipo')?.value||'tarefa',
     data: document.getElementById('tf-data')?.value||today(),
-    leadId: document.getElementById('tf-lead')?.value||null,
+    hora: document.getElementById('tf-hora')?.value||null,
+    leadId, prio,
     done: false, criadoEm: today()
   });
   DB.saveTasks(tasks);

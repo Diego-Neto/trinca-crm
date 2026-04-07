@@ -963,6 +963,50 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
   .dash-card-label,.dash-insight{color:#333!important}
 }
 
+/* Pipeline Filters */
+.pipeline-filters{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;align-items:center;flex-wrap:nowrap}
+.filter-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .2s}
+.filter-btn:hover{border-color:var(--purple)}
+.filter-btn.active{background:var(--purple2);color:#fff;border-color:var(--purple2)}
+.filter-search{flex:1;min-width:120px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;outline:none}
+.filter-search:focus{border-color:var(--purple)}
+.col-value{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
+
+/* Feature 2: Alertas */
+.alert-sev-icon{font-size:14px;margin-right:4px}
+.alert-actions-row{margin-top:6px;display:flex;gap:6px}
+.alert-snooze-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;transition:all .2s}
+.alert-snooze-btn:hover{background:var(--bg3)}
+
+/* Feature 3: Tarefas */
+.tarefa-prio{font-size:12px;margin-right:3px}
+.tarefa-hora{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600}
+.tarefa-auto-badge{font-size:9px;background:var(--purple2);color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:700;vertical-align:middle}
+
+/* Feature 4: Debrief */
+.debrief-trend{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px}
+.trend-header{font-size:13px;font-weight:700;margin-bottom:6px}
+.trend-avg{font-size:12px;color:var(--muted);margin-bottom:8px}
+.trend-chart{display:flex;align-items:flex-end;gap:4px;height:40px}
+.trend-bar{flex:1;border-radius:3px 3px 0 0;min-width:20px;transition:height .3s}
+.debrief-score{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-left:8px}
+.debrief-score.good{background:#10b98120;color:#10b981}
+.debrief-score.mid{background:#f59e0b20;color:#f59e0b}
+.debrief-score.bad{background:#ef444420;color:#ef4444}
+.lc-debrief{font-size:10px;color:var(--purple2);margin-top:3px}
+
+/* Feature 5: Sprint Verde */
+.sprint-verde-box{background:linear-gradient(135deg,#10b98110,#10b98105);border:2px solid #10b981;border-radius:12px;padding:14px;margin-bottom:14px}
+.sprint-verde-header{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;color:#10b981;margin-bottom:6px}
+.sprint-verde-desc{font-size:11px;color:var(--muted);margin-bottom:10px}
+.sprint-verde-list{display:flex;flex-direction:column;gap:6px}
+.sprint-lead-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:8px;cursor:pointer;transition:all .15s}
+.sprint-lead-item:hover{background:var(--bg3);transform:translateX(4px)}
+.sprint-num{width:22px;height:22px;border-radius:50%;background:#10b981;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sprint-name{font-weight:700;font-size:13px;flex:1}
+.sprint-dor{font-size:10px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sprint-call{font-size:16px;text-decoration:none;flex-shrink:0}
+
 /* Mobile responsive */
 @media(max-width:480px){
   .dash-grid4{grid-template-columns:repeat(2,1fr)}
