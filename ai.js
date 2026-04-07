@@ -290,3 +290,61 @@ Gere o pitch personalizado.`;
   setAILoading(btn, false);
   if (result) showAIModal('Pitch Personalizado — '+nome, result);
 }
+
+// Injection #6 — Preparar SPIN Selling (Neil Rackham)
+async function prepararSPIN(leadId) {
+  if (!getAIKey()) { configAI(); return; }
+  var lead = DB.getLeads().find(function(l){return l.id===leadId;});
+  if (!lead) return;
+  var btn = event.currentTarget||event.target;
+  setAILoading(btn, true);
+
+  var icpId = typeof getPlaybookICP === 'function' ? getPlaybookICP(lead) : null;
+  var icp = icpId && typeof PB_ICPS !== 'undefined' ? PB_ICPS[icpId] : null;
+  var stageId = typeof getPlaybookStage === 'function' ? getPlaybookStage(lead) : null;
+  var pbStageIdx = stageId && typeof PB_STAGES !== 'undefined' ? PB_STAGES.findIndex(function(s){return s.id===stageId;}) : -1;
+  var pbStage = pbStageIdx >= 0 ? PB_STAGES[pbStageIdx] : null;
+
+  var system = 'Voce e Neil Rackham, criador do SPIN Selling (35.000 vendas estudadas em 23 paises).\n'+
+    'Gere um roteiro SPIN personalizado para este lead de consorcio da Realize Consorcios.\n\n'+
+    'REGRAS:\n'+
+    '- Gere EXATAMENTE 2 perguntas por categoria (S, P, I, N) = 8 perguntas total\n'+
+    '- Perguntas devem parecer CONVERSA NATURAL, nunca interrogatorio\n'+
+    '- Use dados reais do lead (DOR, ICP, ticket, objecao) nas perguntas\n'+
+    '- S (Situacao): coletar contexto (como/qual/quem/quando)\n'+
+    '- P (Problema): identificar dificuldades e insatisfacoes\n'+
+    '- I (Implicacao): ampliar consequencias de nao agir (custo da inacao em R$, 6 meses, 12 meses)\n'+
+    '- N (Necessidade): levar o lead a expressar o valor da solucao\n'+
+    '- Inclua uma DICA DE TRANSICAO entre cada etapa (como mudar de S pra P naturalmente)\n'+
+    '- Termine com FRASE DE FECHAMENTO sugerida apos a etapa N\n\n'+
+    'FORMATO:\n'+
+    'S — SITUACAO\n1. [pergunta]\n2. [pergunta]\nTransicao: [como migrar pra P]\n\n'+
+    'P — PROBLEMA\n1. [pergunta]\n2. [pergunta]\nTransicao: [como migrar pra I]\n\n'+
+    'I — IMPLICACAO\n1. [pergunta]\n2. [pergunta]\nTransicao: [como migrar pra N]\n\n'+
+    'N — NECESSIDADE\n1. [pergunta]\n2. [pergunta]\n\n'+
+    'FECHAMENTO: [frase sugerida]\n\n'+
+    'CONTEXTO DO PRODUTO:\n'+
+    '- Consorcio = alavancagem patrimonial sem juros (nao e compra parcelada)\n'+
+    '- Vs financiamento bancario: 167% de custo total vs 12% do consorcio\n'+
+    '- Regulado pelo Banco Central do Brasil\n'+
+    '- FGTS pode ser usado como lance\n'+
+    '- Realize Consorcios: solidez e historico';
+
+  var memCtx = typeof buildLeadContext === 'function' ? buildLeadContext(leadId) : '';
+  var user = 'Lead: ' + lead.nome + '\n'+
+    'DOR: ' + (lead.dor||'nao informada') + '\n'+
+    'SONHO: ' + (lead.sonho||'nao informado') + '\n'+
+    'OBJECAO JA LEVANTADA: ' + (lead.objecaoPrincipal||'nenhuma') + '\n'+
+    'Perfil ICP: ' + (icp ? icp.nome + ' — ' + icp.dor : (lead.tags||[]).map(function(t){return TAG_SHORT[t]||t;}).join(', ')||'nao informado') + '\n'+
+    'Credito estimado: R$ ' + (lead.ticketEstimado||100000).toLocaleString('pt-BR') + '\n'+
+    'Status: ' + (STATUS_LABELS[lead.status]||lead.status) + '\n'+
+    'Pilar fraco: ' + (lead.pilarFraco||'nenhum identificado') + '\n'+
+    'Notas: ' + (lead.notas||'sem notas') + '\n'+
+    (pbStage ? 'Etapa do funil: ' + pbStage.nome + ' — ' + (pbStage.desc||'') + '\n' : '') +
+    memCtx + '\n'+
+    'Gere o roteiro SPIN personalizado para este lead.';
+
+  var result = await callAI(system, user);
+  setAILoading(btn, false);
+  if (result) showAIModal('SPIN Selling — ' + lead.nome, result);
+}

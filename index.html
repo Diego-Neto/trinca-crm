@@ -1297,7 +1297,8 @@ function renderFocusMode() {
     actionBtnHtml +
     '<div class="fo-secondary">' +
       '<button class="fo-sec-btn fo-nao-atendeu" onclick="focoToggleNaoMenu(\'' + next.id + '\')">📵 Não atendeu</button>' +
-      '<button class="fo-sec-btn" onclick="gerarMensagem(\'' + next.id + '\')">🤖 Msg IA</button>' +
+      '<button class="fo-sec-btn" onclick="gerarMensagem(\'' + next.id + '\')">🤖 Msg</button>' +
+      '<button class="fo-sec-btn" onclick="prepararSPIN(\'' + next.id + '\')">🔬 SPIN</button>' +
       '<button class="fo-sec-btn" onclick="openEditLead(\'' + next.id + '\')">✎ Editar</button>' +
     '</div>' +
     '<div class="fo-nao-menu" id="fo-nao-menu-' + next.id + '" style="display:none">' +
@@ -1863,6 +1864,7 @@ function buildActionCard(lead) {
     <div class="ac-btns">${btns[lead.status]||''}
       ${lead.whatsapp ? `<a class="ac-btn" href="https://wa.me/55${lead.whatsapp.replace(/\D/g,'')}" target="_blank" style="text-decoration:none">💬 WA</a>` : ''}
       <button class="ac-btn ac-btn-ai" onclick="gerarMensagem('${lead.id}')">🤖 Msg IA</button>
+      ${lead.status==='AGUARDANDO-DIAGNOSTICO'||lead.status==='PROPOSTA-ENVIADA'||lead.status==='CADENCIA-ATIVA'?'<button class="ac-btn ac-btn-ai" onclick="prepararSPIN(\''+lead.id+'\')">🔬 SPIN</button>':''}
       <button class="ac-btn" onclick="openPlaybook('${lead.id}')">📖 Play</button>
       <button class="ac-btn" onclick="openEditLead('${lead.id}')">✎ Editar</button>
     </div>
@@ -3022,6 +3024,7 @@ function buildLeadForm(lead, defaultStatus) {
     </div>
     <div class="form-row">
       <button class="btn-ai-full" onclick="gerarPitchPersonalizado('${l.id||'__NEW__'}')">🎯 Pitch Personalizado (IA)</button>
+      ${isEdit ? `<button class="btn-ai-full" onclick="prepararSPIN('${l.id}')">🔬 Preparar SPIN Selling (IA)</button>` : ''}
       ${isEdit && l.status === 'PROPOSTA-ENVIADA' ? `<button class="btn-ai-full" onclick="diagnosticoTrinca('${l.id}')">💎 Diagnóstico Trinca da Certeza (IA)</button>` : ''}
     </div>
     <div class="form-actions">
