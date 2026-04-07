@@ -146,8 +146,14 @@
     <!-- Sub-view: O Mapa -->
     <div id="prev-mapa" class="prev-section" style="display:none"></div>
 
-    <!-- Métricas da Semana (preservado) -->
+    <!-- Métricas do Dia -->
     <div class="calc-box" style="margin-top:14px">
+      <div class="calc-title">📅 Métricas do Dia</div>
+      <div id="daily-metrics-form"></div>
+    </div>
+
+    <!-- Métricas da Semana -->
+    <div class="calc-box">
       <div class="calc-title">📊 Métricas da Semana</div>
       <div id="week-metrics-form"></div>
     </div>
@@ -2274,6 +2280,8 @@ function prevRenderMapa() {
 }
 
 function renderPrevisibilidade() {
+  // Métricas diárias
+  renderDailyMetrics();
   // Sub-tabs
   document.getElementById('prev-tabs').innerHTML =
     '<button class="prev-tab-btn'+(PREV_TAB===0?' on':'')+'" onclick="prevSetTab(0)">Metas & KPIs</button>'+
@@ -2318,14 +2326,100 @@ function renderPrevisibilidade() {
 }
 
 function saveWeekMetrics() {
-  const fields = ['leadsAbordados','diagnosticosAgendados','diagnosticosRealizados','propostas','contratos','seeds'];
-  const data = {semana: today()};
-  fields.forEach(f => data[f] = parseInt(document.getElementById('wm-'+f)?.value)||0);
-  const metrics = DB.getMetrics();
+  var fields = ['leadsAbordados','diagnosticosAgendados','diagnosticosRealizados','propostas','contratos','seeds'];
+  var data = {semana: today()};
+  fields.forEach(function(f){data[f] = parseInt(document.getElementById('wm-'+f)?.value)||0;});
+  var metrics = DB.getMetrics();
   metrics.push(data);
   if (metrics.length > 52) metrics.shift();
   DB.saveMetrics(metrics);
   alert('Métricas salvas!');
+}
+
+// ═══════════════════════════════════════════════════
+// MÉTRICAS DIÁRIAS
+// ═══════════════════════════════════════════════════
+function getDailyMetrics() {
+  var all = JSON.parse(localStorage.getItem('tc_daily_metrics') || '[]');
+  return all;
+}
+function saveDailyMetrics(data) {
+  var all = getDailyMetrics();
+  var idx = all.findIndex(function(d){return d.data === data.data;});
+  if (idx >= 0) all[idx] = data; else all.push(data);
+  if (all.length > 90) all.shift();
+  localStorage.setItem('tc_daily_metrics', JSON.stringify(all));
+}
+function getTodayMetrics() {
+  var t = today();
+  var all = getDailyMetrics();
+  return all.find(function(d){return d.data === t;}) || {data:t,discagens:0,atendidas:0,wpps:0,diagnosticos:0,propostas:0,followups:0,seeds:0};
+}
+
+function renderDailyMetrics() {
+  var dm = getTodayMetrics();
+  // Auto-preencher do touchlog
+  var touchlog = DB.getTouchlog();
+  var todayTouches = touchlog.filter(function(e){return e.data === today();});
+  var autoDisc = todayTouches.filter(function(e){return e.canal && e.canal.match(/ligac|call|normal|pabx/i);}).length;
+  var autoWpp = todayTouches.filter(function(e){return e.canal && e.canal.match(/whats|wpp/i);}).length;
+  var autoTotal = todayTouches.length;
+
+  var fields = [
+    {key:'discagens',label:'Discagens',icon:'📞',auto:autoDisc,tip:'Ligações feitas hoje'},
+    {key:'atendidas',label:'Atendidas',icon:'✅',auto:0,tip:'Quantas atenderam'},
+    {key:'wpps',label:'WhatsApps',icon:'💬',auto:autoWpp,tip:'Mensagens WPP enviadas'},
+    {key:'diagnosticos',label:'Diagnósticos',icon:'🔬',auto:0,tip:'Reuniões realizadas hoje'},
+    {key:'propostas',label:'Propostas',icon:'📋',auto:0,tip:'Propostas enviadas hoje'},
+    {key:'followups',label:'Follow-ups',icon:'🔄',auto:0,tip:'Retornos feitos'},
+    {key:'seeds',label:'Seeds pedidos',icon:'🌱',auto:0,tip:'Indicações solicitadas'}
+  ];
+
+  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+today()+' · Toques registrados automaticamente: <strong>'+autoTotal+'</strong></div>';
+  html += '<div class="daily-grid">';
+  fields.forEach(function(f){
+    var val = dm[f.key] || 0;
+    html += '<div class="daily-field">'+
+      '<div class="daily-field-header"><span>'+f.icon+'</span><span class="daily-field-label">'+f.label+'</span>'+(f.auto>0?'<span class="daily-auto">auto: '+f.auto+'</span>':'')+'</div>'+
+      '<div class="daily-field-input"><button class="daily-btn" onclick="dailyAdj(\''+f.key+'\',-1)">−</button><span class="daily-val" id="dm-'+f.key+'">'+val+'</span><button class="daily-btn" onclick="dailyAdj(\''+f.key+'\',1)">+</button></div>'+
+    '</div>';
+  });
+  html += '</div>';
+  html += '<button class="save-metrics-btn" onclick="saveDailyNow()" style="margin-top:8px">Salvar métricas do dia</button>';
+
+  // Mini histórico dos últimos 5 dias
+  var all = getDailyMetrics().slice(-5).reverse();
+  if (all.length > 0) {
+    html += '<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Últimos dias</div>';
+    html += '<div class="daily-history">';
+    all.forEach(function(d){
+      var total = (d.discagens||0)+(d.wpps||0)+(d.followups||0);
+      html += '<div class="daily-hist-row"><span class="daily-hist-date">'+formatDate(d.data)+'</span>'+
+        '<span title="Discagens">📞'+d.discagens+'</span>'+
+        '<span title="WhatsApp">💬'+d.wpps+'</span>'+
+        '<span title="Diagnósticos">🔬'+d.diagnosticos+'</span>'+
+        '<span title="Propostas">📋'+d.propostas+'</span>'+
+        '<span title="Seeds">🌱'+d.seeds+'</span>'+
+        '<span class="daily-hist-total">Σ'+total+'</span></div>';
+    });
+    html += '</div></div>';
+  }
+
+  document.getElementById('daily-metrics-form').innerHTML = html;
+}
+
+function dailyAdj(key, delta) {
+  var dm = getTodayMetrics();
+  dm[key] = Math.max(0, (dm[key]||0) + delta);
+  saveDailyMetrics(dm);
+  var el = document.getElementById('dm-'+key);
+  if (el) el.textContent = dm[key];
+}
+
+function saveDailyNow() {
+  var dm = getTodayMetrics();
+  saveDailyMetrics(dm);
+  alert('Métricas do dia salvas!');
 }
 
 // ═══════════════════════════════════════════════════

@@ -905,3 +905,20 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .prev-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
 .prev-section{margin-bottom:0}
 @media(max-width:480px){.prev-grid4{grid-template-columns:1fr 1fr}.prev-grid3{grid-template-columns:1fr}.prev-grid2{grid-template-columns:1fr}.prev-scale-table{font-size:10px}}
+
+/* MÉTRICAS DIÁRIAS */
+.daily-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.daily-field{background:var(--bg2);border-radius:8px;padding:8px;text-align:center}
+.daily-field-header{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:6px}
+.daily-field-label{font-size:10px;font-weight:600;color:var(--muted2)}
+.daily-auto{font-size:8px;color:var(--purple2);background:rgba(139,92,246,0.1);padding:1px 4px;border-radius:4px}
+.daily-field-input{display:flex;align-items:center;justify-content:center;gap:6px}
+.daily-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.daily-btn:hover{border-color:var(--purple);color:var(--purple2)}
+.daily-val{font-size:18px;font-weight:700;color:var(--text);min-width:24px}
+.daily-history{display:flex;flex-direction:column;gap:3px}
+.daily-hist-row{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted2);padding:4px 0;border-bottom:1px solid var(--border)}
+.daily-hist-row:last-child{border-bottom:none}
+.daily-hist-date{font-weight:600;color:var(--muted);min-width:40px}
+.daily-hist-total{font-weight:700;color:var(--purple2);margin-left:auto}
+@media(max-width:480px){.daily-grid{grid-template-columns:repeat(3,1fr)}}
