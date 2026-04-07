@@ -261,6 +261,33 @@ var PB_STAGES = [
    lo:'Manda boas-vindas mesmo no estado baixo. Obrigatorio.',
    hi:'Boas-vindas + D+1 reforco + agenda check-in semana 1.'},
 
+  {id:'nutricao',nome:'Nutricao',icon:'\uD83C\uDF31',tag:'NUTRICAO',
+   desc:'Lead nao esta pronto agora mas tem potencial real. Nao e frio — ja revelou dor. O timing nao e seu, e dele. Conteudo educativo + presenca passiva ate o momento certo.',
+   steps:['Registre a data de retorno estimada pelo lead','Envie conteudo educativo quinzenal (artigo, case, video)','Monitore interacao — se abriu/respondeu, pode estar pronto','Nunca pressione. Presenca > insistencia.'],
+   scripts:{
+    empresario:'"[Nome], vi essa analise sobre custo de capital pra empresarios em 2026 — lembrei do que voce mencionou. Quando fizer sentido conversar, to aqui."',
+    liberal:'"Dr(a). [Nome], esse caso de um [profissao] que estruturou patrimonio fora do consultorio pode te interessar. Sem pressa — quando for o momento."',
+    investidor:'"[Nome], a Selic mudou de novo. Pra quem tem carteira em renda fixa, o calculo muda. Tenho os numeros atualizados quando quiser ver."',
+    servidor:'"[Nome], saiu um dado novo sobre patrimonio de servidores vs setor privado. Interessante pra quem ta planejando. Te mando?"',
+    assalariado:'"[Nome], esse conteudo sobre como sair do aluguel sem entrada grande teve muita procura. Lembrei de voce — vale dar uma olhada."',
+    herdeiro:'"[Nome], esse material sobre planejamento patrimonial pos-heranca pode ajudar na sua decisao. Sem pressa."',
+    jovem:'"[Nome], esse case de quem comecou com 25 anos e onde esta hoje com 35 e inspirador. Quando quiser conversar, to aqui."'
+   },
+   cad:[
+    {d:'D15',l:'Conteudo educativo',a:'Artigo, case ou video relevante pro ICP. Tom: "lembrei de voce". Sem CTA de venda.'},
+    {d:'D30',l:'Prova social',a:'Case de sucesso do mesmo perfil. "Fulano na sua situacao fez X". Naturalidade.'},
+    {d:'D45',l:'Check-in leve',a:'"O cenario mudou de la pra ca? Quando fizer sentido, a porta ta aberta."'},
+    {d:'D60',l:'Gancho externo',a:'Noticia do mercado, mudanca de Selic, produto novo. Ponte pra reabrir conversa.'}
+   ],
+   objs:[
+    {q:'"Nao e o momento"',s:'Timing genuino — respeite.',d:'"Entendo perfeitamente. Posso te dar um toque em [data]? Sem compromisso — so pra nao perder o timing."'},
+    {q:'Nao responde conteudo',s:'Nao esta engajado — pode estar frio.',d:'Mantenha 1 toque por mes. Se 3 meses sem resposta, mova pra Geladeira.'},
+    {q:'"Ja resolvi de outra forma"',s:'Foi pra concorrente ou mudou de ideia.',d:'"Que bom que resolveu! Se precisar do proximo patrimonio, to aqui." Move pra PERDIDO com motivo.'}
+   ],
+   crm:'DOR: [dor original]\nSTATUS: NUTRICAO · retorno: [data]\nPROXIMO: conteudo D[X] · [tipo conteudo]',
+   lo:'Nutricao e tarefa perfeita pro estado baixo. Organiza, programa, sem pressao.',
+   hi:'Prepara 4 conteudos personalizados por ICP de uma vez. Batch mode.'},
+
   {id:'geladeira',nome:'Geladeira',icon:'\uD83E\uDDCA',tag:'GELADEIRA',
    desc:'R$4,5M esperando o momento certo. Nao e lixo — e pipeline latente. You are a sifter, not an alchemist. Gancho sempre externo. Nunca menciona o passado.',
    steps:['Agenda reativacao: D30+ (frio/sinalizou) ou D60+ (negociacao).','Gancho sempre externo — algo que mudou no mercado, no produto, no contexto.','Nunca menciona tentativas anteriores.','2 tentativas sem resposta > PERDIDO-DEFINITIVO.'],
@@ -294,7 +321,7 @@ function getPlaybookStage(lead) {
   if (s === 'GELADEIRA') return 'geladeira';
   if (s === 'PROPOSTA-ENVIADA') return f === 'NEGOCIACAO' ? 'negociacao' : 'proposta';
   if (s === 'AGUARDANDO-DIAGNOSTICO') return 'agendado';
-  if (s === 'NUTRICAO') return 'proposta';
+  if (s === 'NUTRICAO') return 'nutricao';
   if (s === 'CADENCIA-ATIVA' || s === 'NOVO') {
     if (f === 'SINALIZOU') return 'sinalizou';
     if (f === 'NEGOCIACAO') return 'negociacao';
