@@ -1941,32 +1941,56 @@ function prevRenderTrimestral() {
     '<div class="prev-grid3">'+mMeses.map(function(m){return '<div class="prev-mc"><div class="prev-mc-label">'+m.mes+'</div><div class="prev-mc-val" style="font-size:16px">R$ '+prevF(m.meta)+'</div><div class="prev-mc-sub">'+m.dias+' dias · '+m.contratos+' contratos</div></div>';}).join('')+'</div>'+
     '<div class="prev-kpi-box"><div class="prev-kpi-title">Key Results — '+q.id+'</div>'+
       [['KR1','Fechar '+mMeses.map(function(m){return m.contratos;}).join(' → ')+' contratos',contratosQ+' total'],['KR2','Taxa reunião → proposta acima de 40%','40%+'],['KR3','Show rate acima de 70%','70%+'],['KR4','Gerar 10+ indicações (Seeds) no trimestre','10 seeds']].map(function(k){return '<div class="prev-kpi-row"><div><div style="font-size:9px;font-weight:700;color:var(--muted)">'+k[0]+'</div><div class="prev-kpi-n">'+k[1]+'</div></div><div class="prev-kpi-v">'+k[2]+'</div></div>';}).join('')+
-    '</div>';
+    '</div>'+
+    '<div class="prev-kpi-box" style="margin-top:10px"><div class="prev-kpi-title">Semáforo G4 de atingimento</div>'+
+      '<div class="prev-sem-row">'+
+        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--red)"></div>Abaixo de 60% — execução falha. Revisão imediata.</div>'+
+        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--orange)"></div>60–80% — saudável. Ajusta o parafuso.</div>'+
+        '<div class="prev-sem-item"><div class="prev-sem-dot" style="background:var(--green)"></div>Acima de 90% — meta fácil. Sobe o OKR.</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="margin-top:8px;font-size:9px;color:var(--muted)">OKR G4: 70–80% de atingimento é saudável — você está jogando no limite certo.</div>';
 }
 
 function prevRenderMapa() {
-  var dias = 18;
+  var dias = PREV_DIAS_UTEIS[PREV_MI];
   var d = prevCalc(dias);
   var icpAtend = Math.ceil(d.agend/0.14), icpDisc = Math.ceil(icpAtend/0.35), icpDiscDia = Math.ceil(icpDisc/dias);
   var genAtend = Math.ceil(d.agend/0.10), genDisc = Math.ceil(genAtend/0.17), genDiscDia = Math.ceil(genDisc/dias);
   function step(n,label,pct,cor,maxN){var w=maxN>0?Math.min(100,(n/maxN)*100):100;return '<div class="prev-funnel-step"><div class="prev-funnel-bar" style="width:'+w+'%;background:'+cor+'"></div><div class="prev-funnel-name">'+label+'</div><div class="prev-funnel-num">'+prevF(n)+'</div><div class="prev-funnel-pct">'+pct+'</div></div>';}
+  var scaleRows = [
+    {t:7,s:1,d:Math.ceil(7/0.35),t2:10,s2:1,d2:Math.ceil(10/0.17)},
+    {t:70,s:10,d:Math.ceil(70/0.35),t2:100,s2:10,d2:Math.ceil(100/0.17)},
+    {t:700,s:100,d:Math.ceil(700/0.35),t2:1000,s2:100,d2:Math.ceil(1000/0.17)},
+    {t:7000,s:1000,d:Math.ceil(7000/0.35),t2:10000,s2:1000,d2:Math.ceil(10000/0.17)}
+  ];
+  var scaleBody = scaleRows.map(function(r){
+    return '<tr><td class="prev-scale-n">'+r.t.toLocaleString('pt-BR')+'</td><td class="prev-scale-g">'+r.s.toLocaleString('pt-BR')+'</td><td style="color:var(--muted)">'+r.d.toLocaleString('pt-BR')+'</td><td class="prev-scale-n">'+r.t2.toLocaleString('pt-BR')+'</td><td class="prev-scale-a">'+r.s2.toLocaleString('pt-BR')+'</td><td style="color:var(--muted)">'+r.d2.toLocaleString('pt-BR')+'</td></tr>';
+  }).join('');
   document.getElementById('prev-mapa').innerHTML =
-    '<div class="prev-info">Meta R$ '+prevF(PREV_META)+' · Ticket R$ '+prevF(PREV_TICKET)+'</div>'+
+    '<div class="prev-info">Meta R$ '+prevF(PREV_META)+' · Ticket R$ '+prevF(PREV_TICKET)+' · '+PREV_MESES_F[PREV_MI]+' 2026: <strong>'+dias+' dias úteis</strong></div>'+
     '<div class="prev-grid2">'+
-      '<div class="prev-mc prev-green" style="text-align:center"><div class="prev-mc-label">ICP ideal — disc/dia</div><div class="prev-mc-val">'+icpDiscDia+'</div><div class="prev-mc-sub">35% atendem · 1:7</div></div>'+
-      '<div class="prev-mc prev-amber" style="text-align:center"><div class="prev-mc-label">ICP geral — disc/dia</div><div class="prev-mc-val">'+genDiscDia+'</div><div class="prev-mc-sub">17% atendem · 1:10</div></div>'+
+      '<div class="prev-mc prev-green" style="text-align:center"><div class="prev-mc-label">ICP ideal — disc/dia</div><div class="prev-mc-val">'+icpDiscDia+'</div><div class="prev-mc-sub">FACIAP · grupos quentes · 35% atendem</div></div>'+
+      '<div class="prev-mc prev-amber" style="text-align:center"><div class="prev-mc-label">ICP geral — disc/dia</div><div class="prev-mc-val">'+genDiscDia+'</div><div class="prev-mc-sub">frio puro · 17% atendem</div></div>'+
     '</div>'+
     '<div class="prev-grid2" style="margin-bottom:12px">'+
       '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
         '<div style="padding:8px 10px;background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.3);font-size:11px;font-weight:600;color:#10b981">ICP ideal<br><span style="font-size:9px;opacity:.8">1:7 pitch · 35% atend</span></div>'+
-        step(icpDisc,'Discagens','100%','#10b981',icpDisc)+step(icpAtend,'Atendem (35%)','35%','#10b981',icpDisc)+step(d.agend,'Pitch → diag (1:7)','14%','#10b981',icpDisc)+step(d.reunioes,'Show (70%)','70%','#10b981',icpDisc)+step(d.propostas,'Proposta (40%)','40%','#10b981',icpDisc)+step(d.contratos,'Contrato (50%)','50%','#10b981',icpDisc)+
+        step(icpDisc,'Discagens no mês','100%','#10b981',icpDisc)+step(icpAtend,'Atendem (35%)','35%','#10b981',icpDisc)+step(d.agend,'Pitch → diagnóstico (1:7)','14%','#10b981',icpDisc)+step(d.reunioes,'Show rate (70%)','70%','#10b981',icpDisc)+step(d.propostas,'Proposta (40%)','40%','#10b981',icpDisc)+step(d.contratos,'Contrato (50%)','50%','#10b981',icpDisc)+
       '</div>'+
       '<div style="border-radius:10px;border:1px solid var(--border);overflow:hidden">'+
         '<div style="padding:8px 10px;background:rgba(249,115,22,0.1);border-bottom:1px solid rgba(249,115,22,0.3);font-size:11px;font-weight:600;color:#f97316">ICP geral<br><span style="font-size:9px;opacity:.8">1:10 pitch · 17% atend</span></div>'+
-        step(genDisc,'Discagens','100%','#f97316',genDisc)+step(genAtend,'Atendem (17%)','17%','#f97316',genDisc)+step(d.agend,'Pitch → diag (1:10)','10%','#f97316',genDisc)+step(d.reunioes,'Show (70%)','70%','#f97316',genDisc)+step(d.propostas,'Proposta (40%)','40%','#f97316',genDisc)+step(d.contratos,'Contrato (50%)','50%','#f97316',genDisc)+
+        step(genDisc,'Discagens no mês','100%','#f97316',genDisc)+step(genAtend,'Atendem (17%)','17%','#f97316',genDisc)+step(d.agend,'Pitch → diagnóstico (1:10)','10%','#f97316',genDisc)+step(d.reunioes,'Show rate (70%)','70%','#f97316',genDisc)+step(d.propostas,'Proposta (40%)','40%','#f97316',genDisc)+step(d.contratos,'Contrato (50%)','50%','#f97316',genDisc)+
       '</div>'+
     '</div>'+
-    '<div class="prev-ok"><strong>Diferença ICP:</strong> Para '+d.contratos+' contratos, ICP ideal exige '+prevF(icpDisc)+' disc vs '+prevF(genDisc)+' sem qualificação. '+prevF(genDisc-icpDisc)+' disc a menos.</div>';
+    '<div style="height:1px;background:var(--border);margin:10px 0"></div>'+
+    '<div class="prev-mc-label" style="display:block;margin-bottom:8px">Escala — se falo com X, vendo Y</div>'+
+    '<table class="prev-scale-table">'+
+      '<thead><tr><th>Atend. ICP</th><th>Vendas</th><th>Disc.</th><th>Atend. geral</th><th>Vendas</th><th>Disc.</th></tr></thead>'+
+      '<tbody>'+scaleBody+'</tbody>'+
+    '</table>'+
+    '<div class="prev-ok"><strong>A diferença do ICP:</strong> Para os mesmos '+d.contratos+' contratos, ICP ideal exige '+prevF(icpDisc)+' discagens/mês vs '+prevF(genDisc)+' sem qualificação. Diferença: '+prevF(genDisc-icpDisc)+' discagens a menos. You are a sifter, not an alchemist.</div>'+
+    '<div style="font-size:9px;color:var(--muted);margin-top:4px">Fontes: Cognism 2025 (55.701 chamadas — 16,6% atendimento frio / 35% warm); Aaron Ross Receita Previsível; suas taxas reais: 1:7 ICP / 1:10 geral.</div>';
 }
 
 function renderPrevisibilidade() {
