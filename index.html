@@ -5,7 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Trinca da Certeza 4.0 — Realize Consórcios</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b5cf6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script src="logic.js"></script>
+<script src="state.js"></script>
+<script>
+// Sanitização global — protege TODOS os innerHTML automaticamente contra XSS
+(function() {
+  const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    set(value) {
+      desc.set.call(this, typeof value === 'string' ? DOMPurify.sanitize(value, { USE_PROFILES: { html: true } }) : value);
+    },
+    get() { return desc.get.call(this); },
+    configurable: true
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -595,20 +615,13 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// SECURITY — HTML escape para prevenir XSS
-// ═══════════════════════════════════════════════════
-function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// esc() agora vem de logic.js (carregado no <head>)
 
 // ═══════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════
 const STATUSES = ['NOVO','CADENCIA-ATIVA','AGUARDANDO-DIAGNOSTICO','PROPOSTA-ENVIADA','NUTRICAO','GANHO','PERDIDO','GELADEIRA'];
-const STATUS_LABELS = {
-  'NOVO':'Novo','CADENCIA-ATIVA':'Cadência Ativa',
-  'AGUARDANDO-DIAGNOSTICO':'Aguardando Diagnóstico','PROPOSTA-ENVIADA':'Proposta Enviada',
-  'NUTRICAO':'Nutrição','GANHO':'Ganho','PERDIDO':'Perdido','GELADEIRA':'Geladeira'
-};
+// STATUS_LABELS vem de logic.js
 const STATUS_COLORS = {
   'NOVO':'#3b82f6','CADENCIA-ATIVA':'#a78bfa','AGUARDANDO-DIAGNOSTICO':'#f97316',
   'PROPOSTA-ENVIADA':'#ec4899','NUTRICAO':'#64748b','GANHO':'#10b981',
@@ -659,7 +672,7 @@ function tagStyle(tag) {
   }
   return '';
 }
-const CADENCE_DAYS = [0,1,1,2,4,7,9,12,30];
+// CADENCE_DAYS vem de logic.js
 const CADENCE_CANALS = ['','WHATSAPP','LIGACAO','WHATSAPP','LIGACAO','INSTAGRAM','LIGACAO','WHATSAPP','WHATSAPP'];
 const CANAL_ICONS = {WHATSAPP:'💬',LIGACAO:'📞',INSTAGRAM:'📸'};
 const CANAL_LABELS = {WHATSAPP:'WhatsApp',LIGACAO:'Ligação',INSTAGRAM:'Instagram'};
@@ -689,18 +702,7 @@ const CADENCE_MSG_TEMPLATES = [
 // ═══════════════════════════════════════════════════
 // BIPOLAR ENGINE
 // ═══════════════════════════════════════════════════
-function getPhase(humor, energia) {
-  // Estado misto: energia alta + humor baixo = mais perigoso
-  if (humor <= 4 && energia >= 7) return 'misto';
-  if (humor <= 3 && energia >= 5) return 'misto';
-  // Depressao
-  if (humor <= 3 || energia <= 2) return 'depressao';
-  // Hipomaniaco: ambos altos
-  if (humor >= 8 && energia >= 8) return 'hipomaniaco';
-  // Funcional: qualquer eixo comprometido
-  if (humor <= 5 || energia <= 4) return 'funcional';
-  return 'verde';
-}
+// getPhase() vem de logic.js
 
 const PHASES = {
   depressao: {
@@ -735,97 +737,11 @@ const PHASES = {
   },
 };
 
-const DB = {
-  getLeads: () => JSON.parse(localStorage.getItem('tc_leads') || '[]'),
-  saveLeads: (l) => localStorage.setItem('tc_leads', JSON.stringify(l)),
-  getConfig: () => JSON.parse(localStorage.getItem('tc_config') || '{"meta":5,"diasUteis":22}'),
-  saveConfig: (c) => localStorage.setItem('tc_config', JSON.stringify(c)),
-  getState: () => {
-    const s = JSON.parse(localStorage.getItem('tc_state') || '{"date":"","humor":7,"energia":7}');
-    if (s.value !== undefined && s.humor === undefined) { s.humor = s.value; s.energia = s.value; delete s.value; }
-    return s;
-  },
-  saveState: (s) => localStorage.setItem('tc_state', JSON.stringify(s)),
-  getStateHistory: () => JSON.parse(localStorage.getItem('tc_state_history') || '[]'),
-  saveStateHistory: (h) => localStorage.setItem('tc_state_history', JSON.stringify(h)),
-  getCallsToday: () => JSON.parse(localStorage.getItem('tc_calls_today') || '{"date":"","count":0}'),
-  saveCallsToday: (c) => localStorage.setItem('tc_calls_today', JSON.stringify(c)),
-  getDebriefs: () => JSON.parse(localStorage.getItem('tc_debriefs') || '[]'),
-  saveDebriefs: (d) => localStorage.setItem('tc_debriefs', JSON.stringify(d)),
-  getMetrics: () => JSON.parse(localStorage.getItem('tc_metrics') || '[]'),
-  saveMetrics: (m) => localStorage.setItem('tc_metrics', JSON.stringify(m)),
-  getTasks: () => JSON.parse(localStorage.getItem('tc_tasks') || '[]'),
-  saveTasks: (t) => localStorage.setItem('tc_tasks', JSON.stringify(t)),
-  getTouchlog: () => JSON.parse(localStorage.getItem('tc_touchlog') || '[]'),
-  saveTouchlog: (t) => { localStorage.setItem('tc_touchlog', JSON.stringify(t.slice(-800))); },
-  getAnalytics: () => JSON.parse(localStorage.getItem('tc_analytics') || '{}'),
-  saveAnalytics: (a) => localStorage.setItem('tc_analytics', JSON.stringify(a)),
-  getLeadCtx: () => JSON.parse(localStorage.getItem('tc_lead_ctx') || '{}'),
-  saveLeadCtx: (c) => localStorage.setItem('tc_lead_ctx', JSON.stringify(c)),
-  getMsgLog: (leadId) => JSON.parse(localStorage.getItem('tc_ml_'+leadId) || '[]'),
-  saveMsgLog: (leadId, logs) => localStorage.setItem('tc_ml_'+leadId, JSON.stringify(logs.slice(-10))),
-};
+// DB agora vem de state.js (carregado no <head>)
 
-function uuid() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
+// uuid(), today(), formatDate(), daysDiff() agora vêm de logic.js
 
-function today() {
-  return new Date().toISOString().split('T')[0];
-}
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
-}
-
-function daysDiff(isoDate) {
-  if (!isoDate) return null;
-  const d = new Date(isoDate + 'T00:00:00');
-  const t = new Date();
-  t.setHours(0,0,0,0);
-  return Math.floor((d - t) / 86400000);
-}
-
-function calcNextTouch(lead) {
-  const dia = lead.diaToqueAtual;
-  if (!lead.dataCriacao || dia == null || isNaN(dia) || dia >= CADENCE_DAYS.length - 1) return null;
-  const next = dia + 1;
-  if (CADENCE_DAYS[next] === undefined) return null;
-  const d = new Date(lead.dataCriacao + 'T00:00:00');
-  if (isNaN(d.getTime())) return null;
-  d.setDate(d.getDate() + CADENCE_DAYS[next]);
-  return d.toISOString().split('T')[0];
-}
-
-function getPriority(lead) {
-  if (lead.status === 'GANHO' || lead.status === 'PERDIDO' || lead.status === 'GELADEIRA') return 'C';
-  if (lead.status === 'AGUARDANDO-DIAGNOSTICO') {
-    const diff = daysDiff(lead.dataHoraDiagnostico);
-    if (diff !== null && diff <= 0) return 'A';
-    return 'B';
-  }
-  if (lead.status === 'PROPOSTA-ENVIADA') {
-    const diff = daysDiff(lead.ultimaAtualizacao);
-    if (diff !== null && diff <= -2) return 'A';
-    return 'B';
-  }
-  if (lead.status === 'CADENCIA-ATIVA' || lead.status === 'NOVO') {
-    const nt = lead.proximoToque || calcNextTouch(lead);
-    if (!nt) return 'C';
-    const diff = daysDiff(nt);
-    if (diff !== null && diff <= 0) return 'A';
-    if (diff !== null && diff <= 2) return 'B';
-    return 'C';
-  }
-  if (lead.status === 'NUTRICAO') {
-    const diff = daysDiff(lead.dataRetornoNutricao);
-    if (diff !== null && diff <= 2) return 'B';
-    return 'C';
-  }
-  return 'C';
-}
+// calcNextTouch() e getPriority() vêm de logic.js
 
 function getAlerts() {
   const leads = DB.getLeads();
@@ -885,30 +801,7 @@ function getAlerts() {
 // ═══════════════════════════════════════════════════
 // VETOS & VALIDAÇÕES (Pedro Valério Protocol)
 // ═══════════════════════════════════════════════════
-const STATUS_FLOW_ALLOWED = {
-  'NOVO':['CADENCIA-ATIVA','NUTRICAO','PERDIDO','GELADEIRA'],
-  'CADENCIA-ATIVA':['AGUARDANDO-DIAGNOSTICO','NUTRICAO','PERDIDO','GELADEIRA'],
-  'AGUARDANDO-DIAGNOSTICO':['PROPOSTA-ENVIADA','CADENCIA-ATIVA','PERDIDO','NUTRICAO'],
-  'PROPOSTA-ENVIADA':['GANHO','CADENCIA-ATIVA','PERDIDO','NUTRICAO','GELADEIRA'],
-  'NUTRICAO':['CADENCIA-ATIVA','GELADEIRA','PERDIDO'],
-  'GELADEIRA':['CADENCIA-ATIVA','PERDIDO'],
-  'GANHO':[],'PERDIDO':['CADENCIA-ATIVA'],
-};
-
-function canAdvanceStatus(lead, newStatus) {
-  const allowed = STATUS_FLOW_ALLOWED[lead.status] || [];
-  if (!allowed.includes(newStatus)) {
-    const nextOk = allowed.map(s=>STATUS_LABELS[s]||s).join(', ') || '—';
-    return {ok:false, error:`Fluxo bloqueado: "${STATUS_LABELS[lead.status]}" → "${STATUS_LABELS[newStatus]}" não é permitido. Próximos válidos: ${nextOk}`};
-  }
-  if (newStatus === 'PROPOSTA-ENVIADA' && !lead.dataHoraDiagnostico) {
-    return {ok:false, error:'Não há data de diagnóstico registrada. Agende o diagnóstico antes de enviar proposta.'};
-  }
-  if (newStatus === 'GANHO' && (!lead.dor || !lead.proximaAcao)) {
-    return {ok:false, error:'Para marcar como Ganho, preencha: DOR do lead + Próxima ação no cadastro.'};
-  }
-  return {ok:true};
-}
+// STATUS_FLOW_ALLOWED e canAdvanceStatus() vêm de logic.js
 
 function getPreCallStatus() {
   const ids = ['c1','c2','c3','c4','c5'];
@@ -3048,5 +2941,15 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 <!-- Supabase — carrega por último para não bloquear UI -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-sync.js"></script>
+<script>
+// PWA — Registro do Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('[SW] Registrado:', r.scope))
+      .catch(e => console.warn('[SW] Falha:', e));
+  });
+}
+</script>
 </body>
 </html>

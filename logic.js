@@ -27,7 +27,7 @@ function daysDiff(isoDate) {
   return Math.floor((d - t) / 86400000);
 }
 
-const CADENCE_DAYS = [0,1,1,2,4,7,9,12,30];
+var CADENCE_DAYS = [0,1,1,2,4,7,9,12,30];
 
 function calcNextTouch(lead) {
   const dia = lead.diaToqueAtual;
@@ -77,7 +77,7 @@ function getPriority(lead) {
   return 'C';
 }
 
-const STATUS_FLOW_ALLOWED = {
+var STATUS_FLOW_ALLOWED = {
   'NOVO':['CADENCIA-ATIVA','NUTRICAO','PERDIDO','GELADEIRA'],
   'CADENCIA-ATIVA':['AGUARDANDO-DIAGNOSTICO','NUTRICAO','PERDIDO','GELADEIRA'],
   'AGUARDANDO-DIAGNOSTICO':['PROPOSTA-ENVIADA','CADENCIA-ATIVA','PERDIDO','NUTRICAO'],
@@ -87,7 +87,7 @@ const STATUS_FLOW_ALLOWED = {
   'GANHO':[],'PERDIDO':['CADENCIA-ATIVA'],
 };
 
-const STATUS_LABELS = {
+var STATUS_LABELS = {
   'NOVO':'Novo','CADENCIA-ATIVA':'Cadência Ativa',
   'AGUARDANDO-DIAGNOSTICO':'Aguardando Diagnóstico','PROPOSTA-ENVIADA':'Proposta Enviada',
   'NUTRICAO':'Nutrição','GANHO':'Ganho','PERDIDO':'Perdido','GELADEIRA':'Geladeira'

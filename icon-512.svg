@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#8b5cf6"/>
+  <text x="96" y="280" text-anchor="middle" font-size="180" font-weight="900" font-family="system-ui" fill="white">TC</text>
+  <text x="96" y="380" text-anchor="middle" font-size="60" font-weight="700" font-family="system-ui" fill="rgba(255,255,255,0.7)">4.0</text>
+</svg>
