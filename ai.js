@@ -125,8 +125,23 @@ async function gerarMensagem(leadId) {
   if (!lead) return;
   const btn = event.currentTarget||event.target;
   setAILoading(btn, true);
-  const toque = (lead.diaToqueAtual||0)+1;
-  const canal = CADENCE_CANALS[Math.min(toque,CADENCE_CANALS.length-1)]||'WHATSAPP';
+  const toque = (lead.toqueNoStage||lead.diaToqueAtual||0)+1;
+  // Buscar dados do playbook se disponível
+  const pbStageId = typeof getPlaybookStage === 'function' ? getPlaybookStage(lead) : null;
+  const pbIcpId = typeof getPlaybookICP === 'function' ? getPlaybookICP(lead) : null;
+  const pbStageIdx = pbStageId && typeof PB_STAGES !== 'undefined' ? PB_STAGES.findIndex(function(s){return s.id===pbStageId;}) : -1;
+  const pbStage = pbStageIdx >= 0 ? PB_STAGES[pbStageIdx] : null;
+  const pbCad = pbStage && pbStage.cad ? pbStage.cad[Math.min(lead.toqueNoStage||0, pbStage.cad.length-1)] : null;
+  // Canal: do playbook se disponível, senão fallback genérico
+  let canal;
+  if (pbCad && pbCad.l) {
+    canal = pbCad.l.match(/liga/i) ? 'LIGACAO' : pbCad.l.match(/instagram/i) ? 'INSTAGRAM' : 'WHATSAPP';
+  } else {
+    canal = CADENCE_CANALS[Math.min(toque,CADENCE_CANALS.length-1)]||'WHATSAPP';
+  }
+  // Script de referência do playbook
+  const pbScript = pbStage && pbIcpId && pbStage.scripts && pbStage.scripts[pbIcpId] ? pbStage.scripts[pbIcpId] : '';
+  const pbObjs = pbStage && pbStage.objs ? pbStage.objs.map(function(o){return o.q+' → '+o.s;}).join('; ') : '';
   const msgLog = DB.getMsgLog(leadId);
   const histStr = msgLog.length > 0
     ? '\nMENSAGENS JÁ ENVIADAS (não repita estas abordagens):\n' + msgLog.map((m,i)=>`${i+1}. [${m.data}] ${m.texto.slice(0,100)}`).join('\n')
@@ -138,15 +153,20 @@ Regras absolutas:
 - Uma única call-to-action no final
 - Máximo 4 linhas para WhatsApp, 6 para outros canais
 - NÃO repita abordagens anteriores listadas no histórico
+- Use o script de referência como BASE mas personalize com os dados do lead
 - Responda APENAS com o texto pronto. Sem prefácio, sem aspas.`;
   const memCtx = buildLeadContext(leadId);
+  const stageCtx = pbStage ? `\nETAPA DO FUNIL: ${pbStage.nome} — ${pbStage.desc||''}` : '';
+  const scriptCtx = pbScript ? `\nSCRIPT DE REFERÊNCIA (adapte, não copie literal): ${pbScript}` : '';
+  const objCtx = pbObjs ? `\nOBJEÇÕES PROVÁVEIS NESTA ETAPA: ${pbObjs}` : '';
+  const cadCtx = pbCad ? `\nAÇÃO ESPERADA: ${pbCad.d} — ${pbCad.l}: ${pbCad.a}` : '';
   const user = `Lead: ${lead.nome} | Status: ${STATUS_LABELS[lead.status]} | Toque #${toque} via ${CANAL_LABELS[canal]||canal}
 DOR: ${lead.dor||'⚠ não informada'}
 SONHO: ${lead.sonho||'não informado'}
 OBJEÇÃO JÁ LEVANTADA: ${lead.objecaoPrincipal||'nenhuma registrada'}
 Próxima ação: ${lead.proximaAcao||'não definida'}
 Perfil: ${(lead.tags||[]).map(t=>TAG_SHORT[t]||t).join(', ')||'não informado'}
-Crédito: R$ ${(lead.ticketEstimado||100000).toLocaleString('pt-BR')} | Fluxo: ${lead.fluxo||'FRIO'}${histStr}${memCtx}
+Crédito: R$ ${(lead.ticketEstimado||100000).toLocaleString('pt-BR')} | Fluxo: ${lead.fluxo||'FRIO'}${stageCtx}${scriptCtx}${cadCtx}${objCtx}${histStr}${memCtx}
 Gere a mensagem.`;
   const result = await callAI(system, user);
   setAILoading(btn, false);
