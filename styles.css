@@ -758,3 +758,10 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .pb-steps li:before{content:"→";position:absolute;left:0;color:var(--muted);font-size:10px}
 .pb-divider{height:0.5px;background:var(--border);margin:8px 0}
 .pb-auto-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(139,92,246,0.15);color:var(--purple2);border:0.5px solid var(--purple);border-radius:8px;padding:2px 8px;font-size:9px;font-weight:700;margin-left:8px}
+.pb-cad-list{display:flex;flex-direction:column;gap:5px}
+.pb-cad-item{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--border)}
+.pb-cad-item:last-child{border-bottom:none}
+.pb-cad-d{min-width:56px;padding:3px 7px;border-radius:6px;font-size:9px;font-weight:700;background:rgba(139,92,246,0.15);color:var(--purple2);border:0.5px solid var(--purple);text-align:center;white-space:nowrap}
+.pb-cad-body{flex:1}
+.pb-cad-l{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.pb-cad-a{font-size:10px;color:var(--muted2);line-height:1.5}

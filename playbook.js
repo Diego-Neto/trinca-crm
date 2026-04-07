@@ -1,119 +1,295 @@
 // ═══════════════════════════════════════════════════
-// PLAYBOOK DE CADÊNCIA — 9 Etapas × 7 ICPs
+// PLAYBOOK DE CADENCIA — 9 Etapas x 7 ICPs
 // ═══════════════════════════════════════════════════
 
-const PB_TAG_TO_ICP = {
+var PB_TAG_TO_ICP = {
   'PERFIL-EMPRESARIA':'empresario','PERFIL-LIBERAL':'liberal','PERFIL-INVESTIDOR':'investidor',
   'PERFIL-SERVIDOR':'servidor','PERFIL-ASSALARIADO':'assalariado','PERFIL-HERDEIRO':'herdeiro','PERFIL-JOVEM':'jovem'
 };
 
-const PB_ICPS = {
-  empresario:{nome:'Empresário/a',icon:'👔',dor:'Capital imobilizado em crédito caro corrói margem e crescimento',gatilho:'Expansão, troca de equipamento, fluxo de caixa, imóvel comercial',tip:'Fale em custo de capital e ROI. Nunca parcela.',scripts:{frio:'Sr(a) [nome], vi que você atua no setor [área]. Empresários inteligentes estão antecipando crédito sem juros para expansão — vale 15 min?',agendado:'Antes de tudo: qual é o custo médio do crédito que você usa hoje para crescer?',proposta:'O consórcio zera o juro. Para uma empresa como a sua, isso significa [economia] devolvida ao caixa por ano.'}},
-  servidor:{nome:'Servidor Público',icon:'🏛️',dor:'Patrimônio travado, aposentadoria insuficiente, imóvel próprio ainda distante',gatilho:'Estabilidade salarial, prévia de aposentadoria, concurso aprovado',tip:'Estabilidade = capacidade de planejamento longo. Use isso.',scripts:{frio:'[nome], servidores com estabilidade têm um poder que a maioria não tem: planejar em 5 anos. Existe uma forma de transformar isso em patrimônio real — posso mostrar em 15 min?',agendado:'Como está seu planejamento para os próximos 5 anos? Imóvel próprio faz parte?',proposta:'Com sua estabilidade, o consórcio é previsível como seu salário — sem surpresa de juro.'}},
-  liberal:{nome:'Profissional Liberal',icon:'⚕️',dor:'Renda variável dificulta planejamento, consultório/escritório em aluguel',gatilho:'Troca de carro, consultório próprio, equipamentos, investimento',tip:'Renda variável = medo de compromisso fixo. Mostre a flexibilidade.',scripts:{frio:'[nome], profissionais liberais bem-sucedidos costumam ter renda mas raramente patrimônio proporcional. Existe uma estratégia usada por médicos e advogados que resolve isso — 15 min?',agendado:'O que representa, hoje, pagar aluguel do consultório todo mês? Já calculou esse custo em 10 anos?',proposta:'Seu CRO/OAB e histórico de renda tornam isso aprovável agora — e sem juros.'}},
-  assalariado:{nome:'Assalariado CLT',icon:'💼',dor:'Aluguel consome renda, sem reserva, imóvel próprio parece impossível',gatilho:'Casamento, filho nascendo, aumento salarial, FGTS acumulado',tip:'Use FGTS como ponte emocional — é dinheiro "parado" que pode trabalhar.',scripts:{frio:'[nome], você sabia que seu FGTS pode ser a entrada do seu apê sem mexer no salário? Muita gente não sabe disso — 15 min para eu mostrar?',agendado:'Qual é o valor do seu FGTS hoje? Você já pensou em usar como lance?',proposta:'Com [valor FGTS] de lance, sua parcela fica em [R$X] — menos do que você paga de aluguel.'}},
-  investidor:{nome:'Investidor',icon:'📊',dor:'Busca diversificação real com retorno superior à renda fixa em cenário de queda de juros',gatilho:'Vencimento de CDB/LCI, queda da Selic, diversificação de carteira',tip:'Fale de TIR, não de parcela. Mostre como o consórcio bate a renda fixa em queda.',scripts:{frio:'[nome], com a Selic oscilando, investidores inteligentes estão alocando em consórcio como proteção patrimonial real — você conhece a tese?',agendado:'Qual é o percentual da sua carteira alocado em ativos reais hoje?',proposta:'A TIR do consórcio versus CDB em queda de Selic favorece muito quem entra agora.'}},
-  herdeiro:{nome:'Herdeiro/a',icon:'🏠',dor:'Inventário travado, imóvel de herança sem liquidez, conflito familiar',gatilho:'Processo de inventário, venda de imóvel herdado, partilha',tip:'Delicado. Seja o especialista que resolve o problema familiar — não o vendedor.',scripts:{frio:'[nome], muitas famílias travam o inventário por não saber como dividir o imóvel sem vender. Existe uma saída elegante — posso explicar em 15 min?',agendado:'Como está o processo de inventário hoje? Todos os herdeiros estão alinhados?',proposta:'O consórcio pode absorver a cota do imóvel de herança, liberando cada herdeiro para usar o valor como quiser.'}},
-  jovem:{nome:'Jovem Adulto',icon:'🚀',dor:'Primeiro imóvel parece distante, aluguel pesado no orçamento',gatilho:'Primeiro emprego estável, CLT com 1 ano+, relacionamento sério',tip:'Sonho > produto. Conecte ao imóvel dos sonhos, não à parcela.',scripts:{frio:'[nome], você sabia que quem começa um consórcio com 25 anos termina com o apê quitado antes dos 35? Posso te mostrar como?',agendado:'Se você pudesse ter seu próprio lugar daqui a 5 anos, como você imagina esse imóvel?',proposta:'Com sua idade, o prazo trabalha a seu favor — parcela menor, patrimônio maior no fim.'}},
+var PB_ICPS = {
+  empresario:{nome:'Empresario(a)',icon:'\uD83D\uDC54',
+    dor:'Quer crescer sem pagar custo de banco. Caixa apertado. Emprestimos e cartao corroendo a margem. Quer patrimonio com o dinheiro que ja gasta — so no lugar certo.',
+    gatilho:'capital de giro sem banco',
+    onde:'FACIAP, CDL, ACICLA, grupos de networking empresarial',
+    tip:'Fale em custo de capital e ROI. Nunca parcela.'},
+  liberal:{nome:'Prof. Liberal',icon:'\u2695\uFE0F',
+    dor:'Renda alta, patrimonio concentrado no consultorio/escritorio. Nao sabe como diversificar sem parar de atender. Quer imovel fisico fora da profissao.',
+    gatilho:'patrimonio fora do consultorio',
+    onde:'Grupos de medicos, dentistas, advogados, contadores, arquitetos',
+    tip:'Renda variavel = medo de compromisso fixo. Mostre a flexibilidade.'},
+  investidor:{nome:'Investidor',icon:'\uD83D\uDCCA',
+    dor:'Tem CDB/Tesouro/acoes. Quer imovel fisico na carteira sem resgatar nada. Entende de rentabilidade — quer ver o numero comparado.',
+    gatilho:'diversificacao em ativo fisico',
+    onde:'Grupos de financas, investimentos, empreendedorismo',
+    tip:'Fale de TIR, nao de parcela. Mostre como o consorcio bate a renda fixa em queda.'},
+  servidor:{nome:'Servidor Publico',icon:'\uD83C\uDFDB\uFE0F',
+    dor:'Estabilidade de renda garantida, mas patrimonio parado. Nunca conseguiu acumular. Quer sair do aluguel ou ter o segundo imovel.',
+    gatilho:'renda estavel que nao gera patrimonio',
+    onde:'Grupos de servidores, concurseiros, prefeituras, federais',
+    tip:'Estabilidade = capacidade de planejamento longo. Use isso.'},
+  assalariado:{nome:'Assalariado CLT',icon:'\uD83D\uDCBC',
+    dor:'Paga aluguel todo mes — dinheiro que some. Quer o primeiro imovel mas nao tem entrada. Sente que nunca vai conseguir.',
+    gatilho:'sair do aluguel sem entrada',
+    onde:'Grupos de CLT, RH, financas pessoais',
+    tip:'Use FGTS como ponte emocional — e dinheiro "parado" que pode trabalhar.'},
+  herdeiro:{nome:'Herdeiro(a)',icon:'\uD83C\uDFE0',
+    dor:'Recebeu montante (heranca, venda de imovel, rescisao). Nao quer errar a primeira grande decisao financeira. Medo de perder o que recebeu.',
+    gatilho:'alavancar montante com seguranca',
+    onde:'Indicacao direta, networking pessoal',
+    tip:'Delicado. Seja o especialista que resolve o problema familiar — nao o vendedor.'},
+  jovem:{nome:'Jovem Adulto',icon:'\uD83D\uDE80',
+    dor:'22-32 anos. Quer comecar a construir patrimonio agora. Nao tem entrada grande. Sente que e "cedo demais" — mas e exatamente o momento certo.',
+    gatilho:'comecar patrimonio sem entrada',
+    onde:'Instagram, grupos de empreendedorismo jovem, faculdades',
+    tip:'Sonho > produto. Conecte ao imovel dos sonhos, nao a parcela.'}
 };
 
-const PB_STAGES = [
-  {id:'frio',nome:'Frio',icon:'🧊',tag:'NOVO/CADÊNCIA',
-   steps:['Pesquise nome + empresa no LinkedIn/Instagram','Identifique a DOR provável pelo perfil (ICP)','Mensagem de abertura: gancho externo, não produto','Aguarde 24h — máx 2 tentativas no D1'],
-   cad:[0,1,1,2,4,7],
-   objs:[
-     {q:'Não tenho interesse',r:'Entendo — na verdade não estou vendendo nada agora. Só quero entender se faz sentido pro seu momento. 15 min?'},
-     {q:'Já tenho imóvel',r:'Perfeito! Então provavelmente você tem patrimônio para trabalhar. O que eu faço é diferente — posso mostrar?'},
-     {q:'Não tenho dinheiro',r:'Exatamente por isso faz sentido conversar. O consórcio é pra quem não quer gastar dinheiro em juros.'},
+var PB_STAGES = [
+  {id:'frio',nome:'Lead Frio',icon:'\uD83C\uDFAF',tag:'CADENCIA-ATIVA',
+   desc:'Nunca respondeu. Ligacao primeiro — WPP e fallback. You are a sifter, not an alchemist. 3 tentativas de ligacao antes de mudar canal.',
+   steps:['Liga de manha — ligacao primeiro (Aaron Ross).','Se nao atendeu: WPP em 15min — curiosity gap, nao pitch.','Objetivo unico: gerar resposta ou agendar diagnostico.','Nunca dois contatos no mesmo canal no mesmo dia.'],
+   scripts:{
+    empresario:'"Oi [Nome], aqui e o Diego da Realize. Vi voce no grupo [FACIAP/CDL/ACICLA] — trabalho com empresarios que querem crescer sem pagar o custo do banco. Posso te contar o motivo do contato em 2 minutos?"',
+    liberal:'"Oi Dr(a). [Nome], Diego da Realize. Trabalho com profissionais liberais que querem patrimonio fisico fora do consultorio sem imobilizar capital. 15 minutos essa semana?"',
+    investidor:'"Oi [Nome], Diego aqui. Voce tem ativos financeiros — quero te mostrar como adicionar imovel fisico a carteira sem resgatar nada. 2 minutos?"',
+    servidor:'"Oi [Nome], Diego da Realize. Estabilidade de renda e o perfil mais forte que existe pra uma estrategia que banco nao oferece. Dois minutinhos?"',
+    assalariado:'"Oi [Nome], Diego aqui. Trabalho com pessoas que querem sair do aluguel sem precisar de entrada grande. 2 minutos pra te explicar como funciona?"',
+    herdeiro:'"Oi [Nome], Diego da Realize. Voce tem um montante disponivel e quer fazer ele trabalhar com seguranca — e exatamente o que faco. 15 minutos?"',
+    jovem:'"Oi [Nome], Diego aqui. 22 a 32 anos e o melhor momento da vida pra comecar patrimonio. Tenho uma estrategia sem entrada grande. 2 minutos?"'
+   },
+   cad:[
+    {d:'D1 \u2600',l:'Ligacao manha',a:'Canal primario. CHAMP nos primeiros 90s se atendeu. Objetivo: agendar diagnostico. Taxa: 1:7 ICP / 1:10 geral.'},
+    {d:'D1 \uD83C\uDF19',l:'WPP tarde',a:'Fallback se nao atendeu. "Tentei te ligar — [curiosity gap]. Quinta ou sexta ficam bom?" Sem mencionar produto.'},
+    {d:'D2',l:'WPP leve',a:'"Ainda faz sentido a gente conversar essa semana?" Sem mencionar D1. Tom neutro.'},
+    {d:'D4',l:'Ligacao',a:'Angulo diferente da D1. Se nao atendeu: sem WPP hoje. Registra no CRM.'},
+    {d:'D7',l:'Instagram',a:'Curte > comenta algo genuino > DM: "Vi seu post — interessante. Quando tiver 15min?"'},
+    {d:'D9',l:'Ligacao final',a:'Tom completamente diferente. Muda o gatilho. Ultima tentativa ativa.'},
+    {d:'D12',l:'Encerramento',a:'"Nao quero insistir — quando mudar o momento, to aqui." > GELADEIRA D30+'}
    ],
-   crm:'DOR: [o que revelou]\nORIGEM: [como chegou]\nPRÓX AÇÃO: Mensagem D[X] em [data]',
-   lo:'Simplifique a mensagem. Uma frase, um gancho. Sem sobrecarga.',
-   hi:'Revise antes de enviar. Estado hipomaniaco tende a mensagens longas que assustam.'},
-  {id:'sinalizou',nome:'Sinalizou',icon:'👋',tag:'SINALIZOU',
-   steps:['NÃO mencione o contato anterior','Ancore na DOR que ele(a) revelou','Proponha diagnóstico de 15 min com data+hora específica','Confirme 24h antes'],
-   cad:[0,1,2,4],
    objs:[
-     {q:'Me manda informações por WhatsApp',r:'Claro! Mas para personalizar, preciso entender seu objetivo. São 5 min. Pode ser hoje às [hora]?'},
-     {q:'Vou pensar',r:'Faz sentido. Enquanto pensa — qual é o maior obstáculo que te faz hesitar?'},
+    {q:'"Nao tenho interesse"',s:'Nao sabe o que voce faz — rejeita a imagem, nao o produto.',d:'Curiosity gap + porta aberta. Nunca defende.\n"Faz sentido — a maioria pensa que consorcio e compra parcelada. O que faco e diferente: alavancagem patrimonial sem juros. Se um dia esse contexto mudar, to aqui."'},
+    {q:'"Agora nao e bom momento"',s:'Agenda ou prioridade? Separa antes de responder.',d:'"E mais a agenda cheia ou esse assunto nao esta no radar agora? Pergunto porque a resposta muda o que posso fazer."\nSe prioridade: "Se voce seguir do jeito que esta por 12 meses — o que voce sente que pode travar?"'},
+    {q:'"Me manda material"',s:'Fuga — nao quer parar a conversa agora.',d:'"Seria generico demais. O que faco depende do cenario de cada pessoa. 15 minutos. Quinta ou sexta?"'}
    ],
-   crm:'DOR REVELADA: [exata frase dele/a]\nAGENDAMENTO: [data/hora]\nCONFIRMAÇÃO: pendente',
-   lo:'Não cobre demais. Um follow-up claro, sem pressão.',
-   hi:'Cuidado com entusiasmo excessivo — pode parecer desesperado. Tom neutro e consultivo.'},
-  {id:'parou',nome:'Parou de Responder',icon:'🔇',tag:'CADÊNCIA TRAVADA',
-   steps:['Pausa de 7 dias antes de reativar','Mude o canal (WA → ligação → e-mail)','Gancho externo novo: Selic, notícia do mercado, produto novo','Última tentativa: "Pode ter meu contato para quando fizer sentido?"'],
-   cad:[7,14,21],
+   crm:'DOR: desconhecida\nSTATUS: D[X] \u00B7 [canal] \u00B7 sem resposta\nPROXIMO: [canal] \u00B7 D[X+1] \u00B7 [horario]',
+   lo:'2 WPPs frios personalizados. Sem ligar. Alimenta pipeline.',
+   hi:'4 ligacoes + WPP fallback + Instagram D7. Cadencia completa.'},
+
+  {id:'sinalizou',nome:'Sinalizou',icon:'\uD83D\uDCAC',tag:'RESPONDEU',
+   desc:'Respondeu em qualquer canal. Cadencia encerrada. Modo conversa — responde ao que ela/ele trouxe. People buy on emotion and justify with logic.',
+   steps:['Para a cadencia imediatamente.','Responde ao que ela/ele trouxe — nunca ignora o contexto.','Objetivo: CHAMP + diagnostico agendado na mesma conversa.','CTA sempre com duas opcoes. Nunca pergunta aberta.'],
+   scripts:{
+    empresario:'"Que bom que respondeu! Pra eu entender o seu momento: a empresa esta em crescimento, consolidando o que tem, ou reorganizando o caixa? Pergunto porque o que faco funciona diferente pra cada cenario."',
+    liberal:'"Otimo! Voce ja tem algum imovel de investimento alem do consultorio/escritorio, ou esta construindo o primeiro patrimonio fisico fora da sua area?"',
+    investidor:'"Boa! Voce ja tem ativos financeiros — o que falta na sua carteira que papel nao consegue entregar?"',
+    servidor:'"Que bom! Voce esta pensando em sair do aluguel, ou ja tem imovel e quer o proximo passo no patrimonio?"',
+    assalariado:'"Oi! Voce esta pagando aluguel hoje? Quanto voce pagou nos ultimos 12 meses — e onde esta esse dinheiro agora?"',
+    herdeiro:'"Otimo que respondeu! O montante que voce tem — esta alocado em alguma coisa agora ou esta em conta parada esperando uma decisao?"',
+    jovem:'"Que bom! Me fala: qual e sua renda mensal hoje e em quanto tempo voce quer ter o primeiro patrimonio fisico?"'
+   },
+   cad:[
+    {d:'Resp.',l:'Resposta imediata',a:'Responde ao que ele/ela trouxe + pergunta CHAMP na mesma mensagem.'},
+    {d:'+24h',l:'Se parou',a:'Ancora na ultima dor revelada. Angulo novo. Nunca "oi tudo bem".'},
+    {d:'+48h',l:'Alterna canal',a:'Ligacao. Tom: verificando, nao cobrando. "So confirmando se recebeu."'}
+   ],
    objs:[
-     {q:'(sem resposta)',r:'[nome], última vez — se não for o momento, tudo bem. Só me diz um "não" que eu encerro.'},
+    {q:'"Vou pensar"',s:'Objecao escondida — nao verbalizou o que trava.',d:'"A ideia em si faz sentido pra voce?" Se sim: "O que falta pra ir em frente?" A resposta aponta o Ten (Certeza) fraco.'},
+    {q:'Parou de responder',s:'Perdeu urgencia — ancora na dor revelada.',d:'"Voce mencionou [X] — ainda e prioridade pra voce?" Uma frase. Sem cobrar. Sem "oi sumiu".'},
+    {q:'"Manda mais informacao"',s:'Fuga de decisao — nao se sente segura/o ainda.',d:'"Posso mandar — mas seria generico. O que realmente ajuda e ver os numeros do seu cenario. 20 minutos. Quinta ou sexta?"'}
    ],
-   crm:'ÚLTIMA TENTATIVA: [data]\nCANAL: [canal usado]\nDECISÃO: Geladeira em [data]',
-   lo:'Não force. Preserve energia para quem está quente.',
-   hi:'Não envie múltiplas mensagens no mesmo dia. Parece desespero.'},
-  {id:'agendado',nome:'Diagnóstico Agendado',icon:'📅',tag:'AGUARD. DIAG.',
-   steps:['Revise o CRM do lead 10 min antes','Confirme presença 24h e 2h antes','Prepare 3 perguntas SPIN baseadas no perfil ICP','Objetivo: identificar as 3 certezas — não vender ainda'],
-   cad:[],
+   crm:'DOR: [o que revelou]\nSTATUS: [canal] [data] \u00B7 dor: [X]\nPROXIMO: agendar diagnostico \u00B7 CTA duas opcoes',
+   lo:'Manda a pergunta de qualificacao. Uma frase. Sem ligar.',
+   hi:'CHAMP completo + fecha diagnostico na mesma conversa.'},
+
+  {id:'parou',nome:'Respondeu & Parou',icon:'\u23F8',tag:'RESPONDEU-PARADO',
+   desc:'Respondeu antes, revelou algo real, sumiu. Voce tem municao — usa. Ancora na dor que ela/ele revelou. Nunca volta a cadencia fria.',
+   steps:['Ancora na ultima dor que ela/ele verbalizou — nao no protocolo.','Formula: [dor revelada] + [contexto externo novo] + [CTA direto].','48h silencio > alterna canal.','Sem resposta > Geladeira D30+.'],
+   scripts:{
+    empresario:'"[Nome], voce mencionou [dor/contexto]. Com a Selic onde esta, o custo do capital so aumentou. 15 minutos essa semana pra te mostrar como outros empresarios resolveram isso sem banco. Quinta ou sexta?"',
+    liberal:'"Dr(a). [Nome], voce falou em patrimonio fora do consultorio. Abriu um grupo com condicoes que encaixam exatamente nesse perfil. Quando posso te mostrar em 15 minutos?"',
+    investidor:'"[Nome], voce mencionou diversificar. Com renda fixa onde esta, imovel via consorcio voltou a ser a opcao mais eficiente. 15 minutos essa semana?"',
+    servidor:'"[Nome], voce falou em sair do aluguel. Com o INCC subindo, esperar ficou mais caro mes a mes. Quinta ou sexta, 15 minutos?"',
+    assalariado:'"[Nome], voce mencionou o aluguel. Em 12 meses voce paga R$ X que some. Tenho uma opcao que redireciona isso pra patrimonio. 15 minutos?"',
+    herdeiro:'"[Nome], o montante parado perde pra inflacao todo mes que passa. Tenho uma estrutura que resolve isso com seguranca. Quando posso te mostrar?"',
+    jovem:'"[Nome], voce mencionou que quer comecar logo. Abriu um grupo novo com entrada que cabe no seu orcamento agora. Quinta ou sexta?"'
+   },
+   cad:[
+    {d:'P1',l:'Ancora na dor',a:'[Dor revelada] + contexto novo + CTA duas opcoes. Uma mensagem so.'},
+    {d:'+48h',l:'Alterna canal',a:'Ligacao. Tom: verificando. "So confirmando se recebeu minha mensagem."'},
+    {d:'+96h',l:'Geladeira',a:'Tag GELADEIRA. Reativa D30+ com gancho externo — nunca menciona o passado.'}
+   ],
    objs:[
-     {q:'Pode ser mais rápido?',r:'Sim! Vou direto ao ponto. Só preciso de 3 respostas suas para ver se faz sentido.'},
-     {q:'Preciso do meu cônjuge',r:'Ótimo sinal — significa que é uma decisão importante. Posso incluir ele(a) na próxima conversa?'},
+    {q:'Silencio depois de ter respondido',s:'Perdeu urgencia ou surgiu obstaculo.',d:'"Voce mencionou [X] — ainda e prioridade?" Ancora sempre. Nunca "oi tudo bem?".'},
+    {q:'"To muito ocupada/o"',s:'Voce nao e urgente o suficiente ainda.',d:'"Entendo. Quando seria o momento — semana que vem ou no mes que vem?" Define data. Volta com agenda.'},
+    {q:'"Vou te chamar quando estiver pronta/o"',s:'Educacao — nao vai chamar.',d:'"Pra nao perder o timing — posso te dar um toque em [data]? Sem compromisso nenhum."'}
    ],
-   crm:'DIAGNÓSTICO: [data/hora]\nCONFIRMEI: sim/não\nPERGUNTAS SPIN: S:[?] P:[?] I:[?] N:[?]',
-   lo:'Curto e direto. Máx 20 min. Não explore tudo numa sessão baixa.',
-   hi:'Não adiantou o fechamento. O diagnóstico é para ouvir, não vender.'},
-  {id:'diagnostico',nome:'Diagnóstico em Andamento',icon:'🔬',tag:'EM REUNIÃO',
-   steps:['S — Situação: perfil financeiro e objetivo','P — Problema: custo atual, o que trava','I — Implicação: quanto custa NÃO resolver','N — Necessidade: o lead articula o valor em voz alta'],
-   cad:[],
+   crm:'DOR: [o que revelou antes de parar]\nSTATUS: parou apos [data] \u00B7 dor: [X]\nPROXIMO: ancora + contexto \u00B7 [canal] \u00B7 [data]',
+   lo:'WPP ancora na dor. Uma frase. Sem ligar.',
+   hi:'WPP ancora + ligacao fallback 48h + CRM atualizado.'},
+
+  {id:'agendado',nome:'Diagnostico Agendado',icon:'\uD83D\uDCC5',tag:'DIAGNOSTICO-AG',
+   desc:'Reuniao marcada. Dois trabalhos: garantir presenca e chegar com a dor mapeada. Show rate medio do mercado: 70%. Voce protege esse numero.',
+   steps:['Confirma em ate 5min apos agendar — cria compromisso real.','Lembrete 24h antes (17h-19h) com o valor da reuniao, nao so horario.','Lembrete da manha: curto, link, nada mais.','Prepara abertura SPIN baseada no CHAMP que voce ja coletou.'],
+   scripts:{
+    empresario:'"[Nome], confirmado: [dia], [hora]. Vai ser pratico — olho o cenario da empresa e te mostro como outros empresarios na mesma situacao resolveram isso. Qualquer imprevisto, me avisa aqui."',
+    liberal:'"Dr(a). [Nome], confirmado. Vou preparar uma analise especifica pro seu perfil de renda e patrimonio. Qualquer imprevisto me avisa."',
+    investidor:'"[Nome], confirmado. Trago os numeros comparando consorcio vs sua alocacao atual em renda fixa. Qualquer imprevisto me avisa."',
+    servidor:'"[Nome], confirmado: [dia], [hora]. Trago a simulacao personalizada pro seu perfil de renda estavel. Ate la!"',
+    assalariado:'"[Nome], confirmado. Trago a comparacao: continuar pagando aluguel vs construir patrimonio. Os numeros vao falar por si. Ate [dia]!"',
+    herdeiro:'"[Nome], confirmado. Vou mostrar como estruturar o montante de forma segura com projecao de 5 e 10 anos. Qualquer imprevisto me avisa."',
+    jovem:'"[Nome], confirmado! Vou mostrar os numeros de quem comecou na sua idade — os resultados em 10 anos sao impossiveis de ignorar. Ate [dia]!"'
+   },
+   cad:[
+    {d:'D0 -5min',l:'Confirmacao imediata',a:'"[Dia], [hora]. Se surgir imprevisto, so me avisa aqui. Ate la!" — em ate 5min apos agendar.'},
+    {d:'D-1 noite',l:'Lembrete 17h-19h',a:'Valor da reuniao, nao so horario. "Vai ser pratico — olho seu cenario e mostro como outros resolveram."'},
+    {d:'Manha',l:'Lembrete do dia',a:'"E hoje. [Hora]. Link: [link]." Curto. So isso.'}
+   ],
    objs:[
-     {q:'Quanto custa?',r:'Antes de responder, posso fazer uma pergunta? Qual seria o valor certo para o seu objetivo?'},
-     {q:'Qual é o retorno?',r:'Depende do lance e do prazo. Me conta: você tem reserva para lance? Isso muda tudo no cálculo.'},
+    {q:'Cancela vespera (1o)',s:'Primeiro cancelamento — sem drama.',d:'"Sem problemas! Essa semana ainda ou na semana que vem?" Duas opcoes. Sem ressentimento.'},
+    {q:'Cancela 2a vez',s:'Objecao de prioridade — nomeia diretamente.',d:'"Segunda vez que nao conseguimos. Sendo direto: o que esta travando esses 20 minutos?"'},
+    {q:'Nao confirma o lembrete',s:'Risco de no-show — age antes.',d:'Liga 1h antes: "So confirmando nossa conversa de hoje as [hora]. Tudo certo?"'}
    ],
-   crm:'SPIN COMPLETO: [respostas]\nTICKET ESTIMADO: R$[X]\nPILARES: Produto[N] Você[N] Empresa[N]\nDECISOR: sozinho/acompanhado',
-   lo:'Deixe o lead falar 70% do tempo. Você escuta e toma nota.',
-   hi:'Não apresente números na primeira reunião se não tiver os dados completos.'},
-  {id:'proposta',nome:'Proposta Enviada',icon:'📋',tag:'PROPOSTA',
-   steps:['Envie proposta personalizada com nome + sonho do lead','Marque follow-up em 48h (não 24h — deixa respirar)','Follow-up: "Qual das certezas está abaixo de 7/10 pra você?"','Nunca: "O que você achou?" — pergunta aberta demais'],
-   cad:[2,5,9],
+   crm:'DOR: [dor CHAMP que motivou o agendamento]\nSTATUS: agendado [dia] [hora] \u00B7 confirmou: sim/nao\nPROXIMO: lembrete D-1 \u00B7 preparar abertura SPIN',
+   lo:'Manda so o lembrete de confirmacao. Nada mais.',
+   hi:'Confirma + prepara abertura SPIN completa com dor mapeada.'},
+
+  {id:'diagnostico',nome:'Em Diagnostico',icon:'\uD83D\uDD0D',tag:'REUNIAO-ATIVA',
+   desc:'Modo Closer ativo. SPIN + Trinca da Certeza. Voce nao vende produto — revela a dor dela/dele pra ela/ele mesma/o. Ela/ele fala 70% do tempo.',
+   steps:['Abre com a dor que revelou no CHAMP — nunca com pitch.','SPIN: Situacao > Problema > Implicacao > Necessidade.','Ela/ele fala 70% do tempo. Voce pergunta — nao despeja.','So apresenta quando ela/ele articulou a propria dor.'],
+   scripts:{
+    empresario:'"[Nome], voce mencionou [dor]. Como isso esta afetando o caixa da empresa na pratica hoje? Me conta mais."',
+    liberal:'"O que acontece com sua renda se voce parar de atender por 3 meses? Tem alguma protecao patrimonial fora da sua area profissional?"',
+    investidor:'"Voce tem [ativos]. Se o cenario de juros mudar, quanto do seu patrimonio esta protegido em ativo fisico neste momento?"',
+    servidor:'"Voce tem estabilidade de renda garantida. Em 10 anos, qual e o seu patrimonio se voce seguir exatamente do jeito que esta hoje?"',
+    assalariado:'"Quanto voce pagou de aluguel nos ultimos 12 meses? Consegue me dizer agora onde esta esse dinheiro?"',
+    herdeiro:'"O montante que voce recebeu — qual seria a pior coisa que poderia acontecer com ele nos proximos 3 anos se ficar parado?"',
+    jovem:'"Daqui a 10 anos voce tem entre 32 e 42 anos. Se continuar do jeito que esta, qual e seu patrimonio nessa data?"'
+   },
+   cad:[
+    {d:'0-10min',l:'Situacao',a:'Confirma e aprofunda o CHAMP. Sem pitch ainda.'},
+    {d:'10-25min',l:'Problema + Implicacao',a:'Planta a dor com perguntas. Ela/ele articula — voce nao fala por ela/ele.'},
+    {d:'25-40min',l:'Necessidade + Solucao',a:'So agora apresenta. Usa as palavras dela/dele — nao seu script.'},
+    {d:'40-60min',l:'Fechamento',a:'Three Tens (Tres Certezas) check + CTA ou proposta na hora.'}
+   ],
    objs:[
-     {q:'Está caro',r:'Em relação a quê? Se for ao financiamento, posso mostrar a diferença. Se ao orçamento atual — qual seria o valor confortável?'},
-     {q:'Vou pesquisar',r:'Faz sentido. O que exatamente você quer comparar? Posso já responder agora e poupar seu tempo.'},
-     {q:'Não é o momento',r:'Entendo. Quando seria? E o que precisa mudar para ser o momento certo?'},
+    {q:'"Quanto custa / qual a parcela?"',s:'Pulou pro preco antes de entender o valor.',d:'"Boa pergunta — depende do credito e prazo. Deixa eu entender o seu cenario antes de simular o numero certo." [Volta pro SPIN]'},
+    {q:'"Ja conheco consorcio"',s:'Conhece o produto antigo — nao a estrategia.',d:'"O que voce sabia sobre usar consorcio como ferramenta de investimento patrimonial — nao de compra parcelada?"'},
+    {q:'"Preciso ver os numeros"',s:'Quer proposta antes do diagnostico completo.',d:'"Posso simular agora. Pra te dar o numero certo, preciso de: qual credito voce imagina e em qual prazo."'}
    ],
-   crm:'PROPOSTA ENVIADA: [data]\nVALOR: R$[X] / parcela R$[Y]\nFOLLOW-UP: [data]\nCERTEZA FRACA: [pilar]',
-   lo:'Follow-up objetivo. Uma pergunta só: "Qual certeza está abaixo de 7?"',
-   hi:'Não pressione fechamento. Hipomaniaco negocia mal e faz promessas.'},
-  {id:'negociacao',nome:'Negociação',icon:'⚖️',tag:'NEGOCIAÇÃO',
-   steps:['Identifique qual das 3 certezas está abaixo de 7/10','NÃO desconte — reforce o pilar fraco','Se Produto: Big Domino (sem juros, patrimônio real)','Se Você: cases, credenciais, depoimentos','Se Empresa: BCB, 60 anos, grupo Realize'],
-   cad:[1,3,7],
+   crm:'DOR: [dor verbalizada por ela/ele no diagnostico]\nSTATUS: diagnostico [data] \u00B7 SPIN: completo/parcial\nPROXIMO: proposta [data] OU fechar na hora',
+   lo:'NAO faz diagnostico. Uma ligacao ruim no estado baixo destroi mais do que nao ligar.',
+   hi:'SPIN completo + Three Tens check + tenta fechar na reuniao.'},
+
+  {id:'proposta',nome:'Proposta Enviada',icon:'\uD83D\uDCCB',tag:'PROPOSTA-ENVIADA',
+   desc:'Simulacao foi. Seu trabalho agora: descobrir onde travou — nao cobrar resposta. Never ask "what did you think?" — ask what\'s missing.',
+   steps:['Nao pergunta "o que achou?". Pergunta o que falta pra avancar.','48h silencio > ancora na dor do diagnostico, nao na proposta.','96h > alterna canal.','Identifica o Ten fraco antes de qualquer contorno.'],
+   scripts:{
+    empresario:'"[Nome], voce teve tempo de olhar a simulacao. Uma pergunta direta: o que ficou faltando pra voce se sentir segura/o pra avancar?"',
+    liberal:'"Dr(a). [Nome], analisou os numeros. O que ficou em aberto pra voce?"',
+    investidor:'"[Nome], comparou com sua carteira atual. O que ainda nao fechou pra voce tomar a decisao?"',
+    servidor:'"[Nome], olhou os numeros. O que ficou faltando pra isso fazer sentido completo?"',
+    assalariado:'"[Nome], viu a simulacao. O que esta pesando mais: o valor da parcela, o prazo, ou outra coisa?"',
+    herdeiro:'"[Nome], viu como o montante trabalha na simulacao. O que ainda te segura?"',
+    jovem:'"[Nome], viu os numeros em 10 anos. O que ainda nao convenceu completamente?"'
+   },
+   cad:[
+    {d:'+24h',l:'Check-in de valor',a:'"Conseguiu olhar a simulacao? Fico a disposicao pra qualquer duvida."'},
+    {d:'+48h',l:'Pergunta o obstaculo',a:'"O que ficou faltando pra voce se sentir segura/o pra avancar?" Direto. Sem cobrar.'},
+    {d:'+72h',l:'Ligacao',a:'Alterna canal. Tom diagnostico: "Quero entender o que ainda esta em aberto."'},
+    {d:'+120h',l:'Urgencia real',a:'So se verdadeira: "O grupo fecha semana que vem. Quero garantir sua vaga se fizer sentido."'}
+   ],
    objs:[
-     {q:'Me dá um desconto',r:'Não tenho como mexer no produto — o que posso fazer é encontrar o plano que cabe no seu orçamento. Qual é o máximo confortável?'},
-     {q:'Preciso pensar mais',r:'Com certeza. O que especificamente ainda não está claro para você?'},
-     {q:'Tenho uma proposta melhor',r:'Me conta — o que eles estão oferecendo? Quero entender se é comparável.'},
+    {q:'"Parcela ficou alta"',s:'Ten #3 — medo de nao sustentar o compromisso.',d:'"Quanto voce paga de aluguel ou juros hoje por mes? Se a parcela for menor — voce nao gasta mais, redireciona." Se alta: simula carta menor.'},
+    {q:'"Preciso falar com marido/socia/o/contador"',s:'Influenciador invisivel entrou no jogo.',d:'"Posso te mandar um resumo de 3 pontos pra facilitar essa conversa? > Envia. > Quando voces conversarem, qual seria o melhor momento pra uma call rapida com os dois?"'},
+    {q:'"Vou pensar mais um pouco"',s:'Ultima barreira ou objecao oculta.',d:'"De 0 a 10, onde voce esta pra avancar nisso?" Se 7+: "O que falta pra ir de [X] pra 10?"'}
    ],
-   crm:'PILAR FRACO: [certeza abaixo de 7]\nARGUMENTO USADO: [qual]\nDECISOR: sozinho/cônjuge/sócio\nPRÓX: [data]',
-   lo:'Uma objeção por reunião. Não tente resolver tudo de uma vez.',
-   hi:'Não ceda margem por impulso. Consulte antes de qualquer concessão.'},
-  {id:'fechamento',nome:'Fechamento',icon:'🏆',tag:'GANHO',
-   steps:['Trial close: "Numa escala de 1-10, o quanto faz sentido?"','Se 7+: "O que falta para ser 10?" → resolve → fecha','Confirme: nome, CPF, e-mail, conta para débito','Encaminhe para assinatura digital — não deixe esfriar'],
-   cad:[],
+   crm:'DOR: [dor do diagnostico]\nSTATUS: proposta [data] \u00B7 R$[credito] \u00B7 parcela R$[X]\nPROXIMO: follow-up obstaculo [data+48h]',
+   lo:'Manda o check-in de valor. Uma mensagem.',
+   hi:'Check-in + obstaculo + prepara contorno do Ten fraco.'},
+
+  {id:'negociacao',nome:'Negociacao',icon:'\uD83D\uDD25',tag:'NEGOCIACAO',
+   desc:'Objecionando = considerando. Quem nao quer comprar some — nao objeta. Identifica o Ten (Certeza) fraco e reconstroi. Maximo 3 loops.',
+   steps:['Todo "nao" aponta um Ten fraco: produto (#1), voce (#2) ou ela/ele mesma/o (#3).','Diagnostico: "Se o [obstaculo] nao fosse questao — voce avancaria?"','Loop maximo 3x. Depois: Thresholds (Limiares).','Act as if — sua certeza absoluta e contagiante.'],
+   scripts:{
+    empresario:'"Sobre a estrategia em si — faz sentido pra voce? Voce gosta da ideia?" Se sim: "O que esta impedindo voce de avancar hoje?"',
+    liberal:'"Ter patrimonio fisico fora do consultorio faz sentido pra voce?" Se sim: "O que ainda esta em aberto que nao fechou?"',
+    investidor:'"Adicionar imovel fisico a carteira sem resgatar renda fixa — faz sentido?" Se sim: "O que falta pra voce fechar isso?"',
+    servidor:'"Usar sua estabilidade de renda pra construir patrimonio agora — faz sentido pra voce?" Se sim: "O que ainda te segura?"',
+    assalariado:'"Parar de pagar aluguel e comecar a construir — faz sentido pra voce?" Se sim: "O que falta pra isso acontecer?"',
+    herdeiro:'"Alavancar o montante de forma estruturada e segura — faz sentido?" Se sim: "O que ainda te preocupa?"',
+    jovem:'"Comecar a construir patrimonio agora enquanto o tempo trabalha pra voce — faz sentido?" Se sim: "O que falta pra dar esse passo?"'
+   },
+   cad:[
+    {d:'Loop 1',l:'Isola a objecao',a:'"A ideia faz sentido? Voce gosta?" — separa produto de acao (Ten #1 vs acao).'},
+    {d:'Loop 2',l:'Money Aside',a:'"Se [obstaculo] nao fosse questao — voce avancaria?" — identifica o Ten exato.'},
+    {d:'Loop 3',l:'Utter Sincerity',a:'"Voce me disse que faz sentido. O que estou sentindo e que tem algo que ainda nao veio a tona. Posso perguntar o que e?"'},
+    {d:'Thresh.',l:'Threshold',a:'"De 0 a 10 — onde voce esta? O que falta pra 10?"'}
+   ],
    objs:[
-     {q:'Deixa eu assinar amanhã',r:'Claro! Só te peço que a gente faça o pré-cadastro agora — leva 5 min e garante o plano atual.'},
-     {q:'Meu marido/esposa precisa ver',r:'Perfeito. Você consegue incluí-lo(a) numa ligação de 10 min hoje? Quero que vocês decidam juntos.'},
+    {q:'"Parcela alta"',s:'Ten #3 — medo de nao sustentar.',d:'Simula carta menor. "Posso simular um credito que caiba no seu caixa sem apertar. Me fala: qual valor te deixaria confortavel?"'},
+    {q:'"Preciso de mais tempo"',s:'Custo da inacao nao ficou claro.',d:'"Enquanto espera — aluguel/juros/custo de banco continua. Esperar 12 meses tem um numero real. Posso te mostrar quanto custa essa espera?"'},
+    {q:'"Vou pesquisar outras opcoes"',s:'Ten #2 fraco ou comparacao sem criterio.',d:'"Otimo. Me conta: o que voce vai pesquisar — qual a principal variavel pra voce? Dependendo do criterio, posso te mostrar a comparacao agora."'}
    ],
-   crm:'FECHADO EM: [data]\nPLANO: [crédito/prazo]\nASS. DIGITAL: enviada/assinada\nCOMISSÃO: R$[X]',
-   lo:'State baixo = não feche. Reagende para estado alto.',
-   hi:'Revise as 3 certezas. Hipomaniaco fecha cliente errado e gera cancelamento.'},
-  {id:'geladeira',nome:'Geladeira',icon:'❄️',tag:'GELADEIRA',
-   steps:['Registre o motivo e o gancho para reativação futura','Programe D30/D60/D90 com gancho externo','Na reativação: NÃO mencione o passado — abordagem 100% nova','Regra: mínimo 30 dias antes de reativar'],
-   cad:[30,60,90],
+   crm:'DOR: [confirmada no diagnostico]\nSTATUS: objecao [qual] \u00B7 Ten [#1/#2/#3]\nPROXIMO: loop [1/2/3] \u00B7 [canal] \u00B7 [data]',
+   lo:'NAO negocia no estado baixo. Follow-up leve. Uma frase.',
+   hi:'Loop completo + Threshold + fecha se estado 9+.'},
+
+  {id:'fechamento',nome:'Fechamento',icon:'\u2705',tag:'FECHADO',
+   desc:'Ela/ele disse sim. A venda nao acabou — comeca a blindagem contra buyer\'s remorse (arrependimento do comprador). As 48h seguintes determinam cliente ou cancelamento.',
+   steps:['Celebra com ela/ele — a conquista e dela/dele.','Nomeia o remorse antes de aparecer: "E normal uma voz questionar..."','Mensagem de boas-vindas ate 2h apos assinar.','Reforco D+1 ancorando na conquista — nao no produto.'],
+   scripts:{
+    empresario:'"[Nome], a partir de agora voce esta construindo patrimonio com o caixa da empresa trabalhando pra voce, nao contra. Me avisa qualquer duvida que surgir — to aqui."',
+    liberal:'"Dr(a). [Nome], hoje voce separou patrimonio pessoal do consultorio. Decisao que a maioria deixa pra depois — voce fez agora. Parabens."',
+    investidor:'"[Nome], carteira completa: papel + tijolo. Voce tem a camada fisica que faltava, sem resgatar nada. Estrategia certa."',
+    servidor:'"[Nome], voce transformou estabilidade de renda em patrimonio concreto. Em [prazo], esse investimento vai estar la."',
+    assalariado:'"[Nome], voce parou de construir o patrimonio do dono e comecou a construir o seu. Essa e a virada real."',
+    herdeiro:'"[Nome], voce alavancou o montante de forma estruturada e segura. Missao cumprida — com inteligencia."',
+    jovem:'"[Nome], voce comecou cedo. Isso e o maior diferencial que existe em patrimonio. Em 10 anos voce vai olhar pra tras e agradecer essa decisao de hoje."'
+   },
+   cad:[
+    {d:'+2h',l:'Boas-vindas + blindagem',a:'Celebra + nomeia: "E normal uma voz questionar — quando aparecer, me chama antes de qualquer coisa."'},
+    {d:'+24h',l:'Reforco D+1',a:'"O que voce fez ontem vai fazer diferenca em [prazo]. Qualquer duvida — fala comigo antes de pesquisar em qualquer outro lugar."'},
+    {d:'+7d',l:'Check-in semana 1',a:'"Tudo certo com a documentacao? Alguma duvida surgiu?" — monitora sinais de remorse.'}
+   ],
    objs:[
-     {q:'Não quero mais',r:'Entendo perfeitamente. Só me diz — o que mudaria no futuro para fazer sentido?'},
-     {q:'Mudei de ideia',r:'Tudo bem! Para eu encerrar corretamente — o que pesou mais na decisão?'},
+    {q:'"Estou pensando em cancelar"',s:'Buyer\'s remorse. Influenciador ou duvida oculta.',d:'[I Feel Your Pain] "Fico feliz que me falou antes de qualquer coisa. O que mudou desde [dia]?" — descobre o gatilho antes de defender.'},
+    {q:'"Meu/minha [familiar/socio] nao gostou"',s:'Influenciador apareceu pos-fechamento.',d:'"Completamente justo. Posso fazer uma call rapida com voces dois essa semana? Quero que todo mundo esteja confortavel com a decisao."'},
+    {q:'Duvida sobre contemplacao',s:'Ten #1 ressurgindo pos-assinatura.',d:'Reeduca com os numeros do diagnostico. "E voce tem [prazo] de protecao via fundo de reserva — esta coberta/o."'}
    ],
-   crm:'MOTIVO GELADEIRA: [motivo]\nGANCHO FUTURO: [o que pode mudar]\nREATIVAR EM: [data D30]',
-   lo:'Aceite a geladeira sem drama. Leads bons voltam com o gancho certo.',
-   hi:'Não tente reverter na hora. A energia vai assustar o lead.'},
+   crm:'DOR: [dor que motivou o fechamento]\nSTATUS: FECHADO [data] \u00B7 R$[credito] \u00B7 parcela R$[X]\nPROXIMO: boas-vindas +2h \u00B7 reforco D+1',
+   lo:'Manda boas-vindas mesmo no estado baixo. Obrigatorio.',
+   hi:'Boas-vindas + D+1 reforco + agenda check-in semana 1.'},
+
+  {id:'geladeira',nome:'Geladeira',icon:'\uD83E\uDDCA',tag:'GELADEIRA',
+   desc:'R$4,5M esperando o momento certo. Nao e lixo — e pipeline latente. You are a sifter, not an alchemist. Gancho sempre externo. Nunca menciona o passado.',
+   steps:['Agenda reativacao: D30+ (frio/sinalizou) ou D60+ (negociacao).','Gancho sempre externo — algo que mudou no mercado, no produto, no contexto.','Nunca menciona tentativas anteriores.','2 tentativas sem resposta > PERDIDO-DEFINITIVO.'],
+   scripts:{
+    empresario:'"[Nome], saiu uma atualizacao no consorcio essa semana que muda o jogo pra empresarios que querem capital sem banco. Lembrei de voce."',
+    liberal:'"Dr(a). [Nome], com a Selic se movendo, consorcio voltou a ser a opcao mais eficiente pra patrimonio fora da clinica/escritorio. Quando posso te mostrar?"',
+    investidor:'"[Nome], surgiu uma janela de grupo com as condicoes que voce estava analisando. Antes de fechar, pensei em voce."',
+    servidor:'"[Nome], abriu um grupo novo com parcelas que encaixam exatamente em quem tem renda estavel como a sua. Vale 10 minutos?"',
+    assalariado:'"[Nome], o INCC desse mes veio alto. Quem espera mais um ano vai pagar mais pelo mesmo credito. Lembrei de voce."',
+    herdeiro:'"[Nome], surgiu uma estrutura de grupo que se encaixa exatamente no montante que voce tem disponivel. Posso te mostrar?"',
+    jovem:'"[Nome], abriu um grupo novo com entrada que cabe no seu orcamento agora. E o timing certo pra voce comecar."'
+   },
+   cad:[
+    {d:'D30+',l:'Gancho externo #1',a:'Mercado/produto/prova social. Sem mencionar passado. Como se fosse primeiro contato.'},
+    {d:'D90+',l:'Gancho diferente #2',a:'Angulo completamente diferente. Silencio total > PERDIDO-DEFINITIVO com motivo registrado.'},
+    {d:'D60+ neg.',l:'Negociacao parada',a:'Nomeia o obstaculo que ficou em aberto + entrega resolucao. So 2 tentativas.'}
+   ],
+   objs:[
+    {q:'Responde mas nao e hora ainda',s:'Timing genuino ou padrao de evitacao?',d:'"Quando seria o momento — proximo trimestre ou no ano que vem?" Define data concreta. Volta com agenda.'},
+    {q:'Nao responde nenhuma tentativa',s:'Nao quer dizer que nao — mas nao quer avancar.',d:'2 tentativas > PERDIDO-DEFINITIVO. Libera espaco pro proximo. You are a sifter.'},
+    {q:'"Ja resolvi de outra forma"',s:'Foi pra concorrente ou resolveu diferente.',d:'"Que bom! Me conta — foi por qual caminho? Quando quiser o proximo patrimonio, to aqui."'}
+   ],
+   crm:'DOR: [original + obstaculo se negociacao]\nSTATUS: GELADEIRA \u00B7 reativacao: [data]\nPROXIMO: gancho [externo/dor] \u00B7 [canal] \u00B7 [data]',
+   lo:'Geladeira e tarefa do estado baixo — organiza reativacoes sem pressao.',
+   hi:'Prepara ganchos personalizados por ICP pros proximos 30 dias.'}
 ];
 
 function getPlaybookStage(lead) {
-  const s = lead.status, f = lead.fluxo || 'FRIO';
+  var s = lead.status, f = lead.fluxo || 'FRIO';
   if (s === 'GANHO') return 'fechamento';
   if (s === 'GELADEIRA') return 'geladeira';
   if (s === 'PROPOSTA-ENVIADA') return f === 'NEGOCIACAO' ? 'negociacao' : 'proposta';
@@ -129,73 +305,107 @@ function getPlaybookStage(lead) {
 
 function getPlaybookICP(lead) {
   if (!lead.tags) return null;
-  for (const tag of lead.tags) {
-    if (PB_TAG_TO_ICP[tag]) return PB_TAG_TO_ICP[tag];
+  for (var i = 0; i < lead.tags.length; i++) {
+    if (PB_TAG_TO_ICP[lead.tags[i]]) return PB_TAG_TO_ICP[lead.tags[i]];
   }
   return null;
 }
 
-let _pbLeadId = null, _pbSi = 0, _pbIi = null;
+var _pbLeadId = null, _pbSi = 0, _pbIi = null;
 
 function openPlaybook(leadId) {
   _pbLeadId = leadId;
-  const lead = DB.getLeads().find(l => l.id === leadId);
+  var lead = DB.getLeads().find(function(l) { return l.id === leadId; });
   if (!lead) return;
-  const stageId = getPlaybookStage(lead);
-  const icpId = getPlaybookICP(lead);
-  _pbSi = PB_STAGES.findIndex(s => s.id === stageId);
+  var stageId = getPlaybookStage(lead);
+  var icpId = getPlaybookICP(lead);
+  _pbSi = PB_STAGES.findIndex(function(s) { return s.id === stageId; });
   if (_pbSi < 0) _pbSi = 0;
   _pbIi = icpId || null;
-  const autoDetected = stageId || icpId;
+  var autoDetected = stageId || icpId;
   document.getElementById('pb-auto-info').style.display = autoDetected ? 'inline-flex' : 'none';
   renderPlaybookContent();
   document.getElementById('modal-playbook').classList.add('open');
 }
 
 function renderPlaybookContent() {
-  const stage = PB_STAGES[_pbSi];
-  const icp = _pbIi ? PB_ICPS[_pbIi] : null;
-  const lead = _pbLeadId ? DB.getLeads().find(l => l.id === _pbLeadId) : null;
+  var stage = PB_STAGES[_pbSi];
+  var icp = _pbIi ? PB_ICPS[_pbIi] : null;
+  var icpId = _pbIi;
+  var lead = _pbLeadId ? DB.getLeads().find(function(l) { return l.id === _pbLeadId; }) : null;
 
   // Stage tabs
-  const stageTabs = PB_STAGES.map((s,i) => `<button class="pb-stab${i===_pbSi?' on':''}" onclick="_pbSi=${i};renderPlaybookContent()">${s.icon} ${s.nome}</button>`).join('');
+  var stageTabs = PB_STAGES.map(function(s,i) {
+    return '<button class="pb-stab' + (i===_pbSi?' on':'') + '" onclick="_pbSi=' + i + ';renderPlaybookContent()">' + s.icon + ' ' + s.nome + '</button>';
+  }).join('');
 
   // ICP tabs
-  const icpKeys = Object.keys(PB_ICPS);
-  const icpTabs = `<button class="pb-icp${!_pbIi?' on':''}" onclick="_pbIi=null;renderPlaybookContent()">Geral</button>` +
-    icpKeys.map(k => `<button class="pb-icp${_pbIi===k?' on':''}" onclick="_pbIi='${k}';renderPlaybookContent()">${PB_ICPS[k].icon} ${PB_ICPS[k].nome}</button>`).join('');
+  var icpKeys = Object.keys(PB_ICPS);
+  var icpTabs = '<button class="pb-icp' + (!_pbIi?' on':'') + '" onclick="_pbIi=null;renderPlaybookContent()">Geral</button>' +
+    icpKeys.map(function(k) {
+      return '<button class="pb-icp' + (_pbIi===k?' on':'') + '" onclick="_pbIi=\'' + k + '\';renderPlaybookContent()">' + PB_ICPS[k].icon + ' ' + PB_ICPS[k].nome + '</button>';
+    }).join('');
 
-  // Script section
-  const script = icp && icp.scripts[stage.id] ? `<div class="pb-sec"><div class="pb-sh on" onclick="pbToggleSec(this)"><span class="pb-shlb">💬 Script ${icp.nome}</span><span class="pb-shar">›</span></div><div class="pb-sbody on"><div class="pb-script">${icp.scripts[stage.id]}</div>${icp.tip?`<div style="font-size:10px;color:var(--yellow);margin-top:6px">💡 ${icp.tip}</div>`:''}</div></div>` : '';
+  // Desc (strategic context)
+  var descHtml = stage.desc ? '<div class="pb-desc">' + stage.desc + '</div>' : '';
+
+  // Script section — now from stage.scripts[icpId]
+  var scriptText = icp && icpId && stage.scripts && stage.scripts[icpId] ? stage.scripts[icpId] : '';
+  var script = scriptText ? '<div class="pb-sec"><div class="pb-sh on" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83D\uDCAC Script ' + icp.nome + '</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody on"><div class="pb-script">' + scriptText + '</div>' + (icp.tip ? '<div style="font-size:10px;color:var(--yellow);margin-top:6px">\uD83D\uDCA1 ' + icp.tip + '</div>' : '') + '</div></div>' : '';
 
   // Steps
-  const stepsHtml = `<div class="pb-sec"><div class="pb-sh on" onclick="pbToggleSec(this)"><span class="pb-shlb">✅ Passos da Etapa</span><span class="pb-shar">›</span></div><div class="pb-sbody on"><ul class="pb-steps">${stage.steps.map(s=>`<li>${s}</li>`).join('')}</ul></div></div>`;
+  var stepsHtml = '<div class="pb-sec"><div class="pb-sh on" onclick="pbToggleSec(this)"><span class="pb-shlb">\u2705 Passos da Etapa</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody on"><ul class="pb-steps">' + stage.steps.map(function(s) { return '<li>' + s + '</li>'; }).join('') + '</ul></div></div>';
 
-  // Objeções
-  const objHtml = stage.objs.length ? `<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">🛡️ Objeções (${stage.objs.length})</span><span class="pb-shar">›</span></div><div class="pb-sbody">${stage.objs.map(o=>`<div class="pb-oc" onclick="this.classList.toggle('on')"><div class="pb-oq">${o.q}</div><div class="pb-od">${o.r}</div></div>`).join('')}</div></div>` : '';
+  // Cadence — rich format {d, l, a}
+  var cadHtml = '';
+  if (stage.cad && stage.cad.length) {
+    var cadItems = stage.cad.map(function(c) {
+      return '<div class="pb-cad-item"><div class="pb-cad-d">' + c.d + '</div><div class="pb-cad-body"><div class="pb-cad-l">' + c.l + '</div><div class="pb-cad-a">' + c.a + '</div></div></div>';
+    }).join('');
+    cadHtml = '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83D\uDCDE Cadencia (' + stage.cad.length + ' touchpoints)</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody"><div class="pb-cad-list">' + cadItems + '</div></div></div>';
+  }
+
+  // Objections — with signal (s) and diagnosis (d)
+  var objHtml = '';
+  if (stage.objs && stage.objs.length) {
+    var objItems = stage.objs.map(function(o) {
+      var dText = o.d ? o.d.replace(/\n/g, '<br>') : '';
+      return '<div class="pb-oc" onclick="this.classList.toggle(\'on\')"><div class="pb-oq">' + o.q + '</div>' +
+        (o.s ? '<div class="pb-os">\uD83D\uDD0D ' + o.s + '</div>' : '') +
+        '<div class="pb-od">' + dText + '</div></div>';
+    }).join('');
+    objHtml = '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83D\uDEE1\uFE0F Objecoes (' + stage.objs.length + ')</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody">' + objItems + '</div></div>';
+  }
 
   // CRM template
-  const crmHtml = `<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">📋 Template CRM</span><span class="pb-shar">›</span></div><div class="pb-sbody"><div class="pb-crm">${stage.crm}</div></div></div>`;
+  var crmHtml = '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83D\uDCCB Template CRM</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody"><div class="pb-crm">' + stage.crm + '</div></div></div>';
 
   // Estado (lo/hi)
-  const stateHtml = `<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">🧠 Estado Mental</span><span class="pb-shar">›</span></div><div class="pb-sbody"><div class="pb-eg"><div class="pb-ec lo"><b>⬇ Estado Baixo</b>${stage.lo}</div><div class="pb-ec hi"><b>⬆ Hipomaniaco</b>${stage.hi}</div></div></div></div>`;
+  var stateHtml = '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83E\uDDE0 Estado Mental</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody"><div class="pb-eg"><div class="pb-ec lo"><b>\u2B07 Estado 4-6 (dias dificeis)</b>' + stage.lo + '</div><div class="pb-ec hi"><b>\u2B06 Estado 7-9 (dias ideais)</b>' + stage.hi + '</div></div></div></div>';
 
   // DOR do lead
-  const leadDor = lead && lead.dor ? `<div class="pb-dor">"${esc(lead.dor.slice(0,120))}"</div>` : '';
-  // ICP info
-  const icpInfo = icp ? `<div class="pb-dor" style="border-color:rgba(139,92,246,0.5)">🎯 ${icp.dor}</div>` : '';
+  var leadDor = lead && lead.dor ? '<div class="pb-dor">"' + esc(lead.dor.slice(0,120)) + '"</div>' : '';
 
-  document.getElementById('playbook-content').innerHTML = `
-    <div class="pb-sw"><div class="pb-stabs">${stageTabs}</div></div>
-    <div class="pb-head"><span class="pb-icon">${stage.icon}</span><span class="pb-stt">${stage.nome}</span><span class="pb-tag">${stage.tag}</span></div>
-    ${leadDor}
-    <div class="pb-sw" style="padding:0 0 6px"><div class="pb-icps">${icpTabs}</div></div>
-    ${icpInfo}
-    <div class="pb-wrap">${script}${stepsHtml}${objHtml}${crmHtml}${stateHtml}</div>`;
+  // ICP info with 'onde' field
+  var icpInfo = '';
+  if (icp) {
+    icpInfo = '<div class="pb-dor" style="border-color:rgba(139,92,246,0.5)">\uD83C\uDFAF ' + icp.dor +
+      (icp.onde ? '<br><span style="font-size:10px;color:var(--text-muted)">\uD83D\uDCCD Onde encontrar: ' + icp.onde + '</span>' : '') +
+      '</div>';
+  }
+
+  document.getElementById('playbook-content').innerHTML =
+    '<div class="pb-sw"><div class="pb-stabs">' + stageTabs + '</div></div>' +
+    '<div class="pb-head"><span class="pb-icon">' + stage.icon + '</span><span class="pb-stt">' + stage.nome + '</span><span class="pb-tag">' + stage.tag + '</span></div>' +
+    descHtml +
+    leadDor +
+    '<div class="pb-sw" style="padding:0 0 6px"><div class="pb-icps">' + icpTabs + '</div></div>' +
+    icpInfo +
+    '<div class="pb-wrap">' + script + stepsHtml + cadHtml + objHtml + crmHtml + stateHtml + '</div>';
 }
 
 function pbToggleSec(el) {
   el.classList.toggle('on');
-  const body = el.nextElementSibling;
+  var body = el.nextElementSibling;
   if (body) body.classList.toggle('on');
 }
