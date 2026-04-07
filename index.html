@@ -1069,6 +1069,10 @@ function confirmReativacao(leadId) {
   leads[idx].proximoToque = null;
   leads[idx].ultimaAtualizacao = today();
   leads[idx].dataEntradaGeladeira = null;
+  // S1: Reset per-stage cadence fields on reactivation
+  leads[idx].toqueNoStage = 0;
+  leads[idx].dataInicioEtapa = today();
+  leads[idx].stageAtual = typeof getPlaybookStage === 'function' ? getPlaybookStage(leads[idx]) : 'frio';
   leads[idx].tentativasReativacao = [...(leads[idx].tentativasReativacao||[]),{date:today(),gancho,resultado:'pendente'}];
   DB.saveLeads(leads);
   logTouch(leadId,'WHATSAPP','reativacao','iniciada');
@@ -1744,6 +1748,10 @@ function advanceLead(id, newStatus) {
   }
   leads[idx].status = newStatus;
   leads[idx].ultimaAtualizacao = today();
+  // S1: Reset per-stage cadence fields on status change
+  leads[idx].toqueNoStage = 0;
+  leads[idx].dataInicioEtapa = today();
+  leads[idx].stageAtual = typeof getPlaybookStage === 'function' ? getPlaybookStage(leads[idx]) : leads[idx].stageAtual;
   DB.saveLeads(leads);
   const res = newStatus==='GANHO'?'fechou':newStatus==='PERDIDO'?'perdido':newStatus==='AGUARDANDO-DIAGNOSTICO'?'agendou':'avanco';
   logTouch(id, 'WHATSAPP', 'avanco-status', res);
@@ -1755,6 +1763,7 @@ function advanceLead(id, newStatus) {
 
 let _pendingCallId = null;
 let _pendingCallToque = null;
+let _pendingCallStageToqueIdx = null;
 let _selectedCallCanal = 'LIGACAO-NORMAL';
 
 function advanceCadence(id) {
@@ -1767,26 +1776,80 @@ function advanceCadence(id) {
   const idx = leads.findIndex(l => l.id === id);
   if (idx < 0) return;
   const lead = leads[idx];
-  const newToque = Math.min((lead.diaToqueAtual || 0) + 1, CADENCE_DAYS.length - 1);
-  const canal = CADENCE_CANALS[newToque] || 'WHATSAPP';
 
-  // Se for ligação, verificar checklist pré-call antes
-  if (canal === 'LIGACAO') {
-    if (!validatePreCall()) return;
-    _pendingCallId = id;
-    _pendingCallToque = newToque;
-    _selectedCallCanal = 'LIGACAO-NORMAL';
-    document.querySelectorAll('.canal-sel-btn').forEach(b => b.classList.toggle('active', b.dataset.canal === 'LIGACAO-NORMAL'));
-    document.getElementById('modal-call').classList.add('open');
-    return;
+  // S3: Per-stage cadence engine
+  var stage = typeof getPlaybookStage === 'function' ? getPlaybookStage(lead) : null;
+  var stageEntry = null;
+  var stageCad = null;
+  if (stage && typeof PB_STAGES !== 'undefined') {
+    for (var si = 0; si < PB_STAGES.length; si++) {
+      if (PB_STAGES[si].id === stage) { stageEntry = PB_STAGES[si]; break; }
+    }
+    if (stageEntry) stageCad = stageEntry.cad || null;
   }
 
-  leads[idx].diaToqueAtual = newToque;
-  leads[idx].proximoToque = calcNextTouch(leads[idx]);
-  leads[idx].ultimaAtualizacao = today();
-  leads[idx].status = 'CADENCIA-ATIVA';
-  DB.saveLeads(leads);
-  logTouch(id, canal, 'toque', 'feito');
+  var canal, newToque;
+  if (stageCad && stageCad.length > 0) {
+    // Per-stage cadence
+    var toqueIdx = lead.toqueNoStage || 0;
+    var nextToqueIdx = Math.min(toqueIdx + 1, stageCad.length - 1);
+    var cadEntry = stageCad[nextToqueIdx] || {};
+    // Determina canal a partir do label da cadencia
+    var cadLabel = (cadEntry.l || '').toLowerCase();
+    if (cadLabel.indexOf('liga') >= 0) {
+      canal = 'LIGACAO';
+    } else if (cadLabel.indexOf('instagram') >= 0 || cadLabel.indexOf('insta') >= 0) {
+      canal = 'INSTAGRAM';
+    } else {
+      canal = 'WHATSAPP';
+    }
+    newToque = Math.min((lead.diaToqueAtual || 0) + 1, CADENCE_DAYS.length - 1);
+
+    // Se for ligação, verificar checklist pré-call antes
+    if (canal === 'LIGACAO') {
+      if (!validatePreCall()) return;
+      _pendingCallId = id;
+      _pendingCallToque = newToque;
+      _pendingCallStageToqueIdx = nextToqueIdx;
+      _selectedCallCanal = 'LIGACAO-NORMAL';
+      document.querySelectorAll('.canal-sel-btn').forEach(b => b.classList.toggle('active', b.dataset.canal === 'LIGACAO-NORMAL'));
+      document.getElementById('modal-call').classList.add('open');
+      return;
+    }
+
+    leads[idx].toqueNoStage = nextToqueIdx;
+    leads[idx].diaToqueAtual = newToque; // backward compat
+    leads[idx].stageAtual = stage;
+    leads[idx].proximoToque = (typeof calcNextTouchByStage === 'function') ? calcNextTouchByStage(leads[idx]) : calcNextTouch(leads[idx]);
+    leads[idx].ultimaAtualizacao = today();
+    leads[idx].status = 'CADENCIA-ATIVA';
+    DB.saveLeads(leads);
+    logTouch(id, canal, 'toque', 'feito');
+  } else {
+    // Fallback: old cadence system
+    newToque = Math.min((lead.diaToqueAtual || 0) + 1, CADENCE_DAYS.length - 1);
+    canal = CADENCE_CANALS[newToque] || 'WHATSAPP';
+
+    // Se for ligação, verificar checklist pré-call antes
+    if (canal === 'LIGACAO') {
+      if (!validatePreCall()) return;
+      _pendingCallId = id;
+      _pendingCallToque = newToque;
+      _pendingCallStageToqueIdx = null;
+      _selectedCallCanal = 'LIGACAO-NORMAL';
+      document.querySelectorAll('.canal-sel-btn').forEach(b => b.classList.toggle('active', b.dataset.canal === 'LIGACAO-NORMAL'));
+      document.getElementById('modal-call').classList.add('open');
+      return;
+    }
+
+    leads[idx].diaToqueAtual = newToque;
+    leads[idx].proximoToque = calcNextTouch(leads[idx]);
+    leads[idx].ultimaAtualizacao = today();
+    leads[idx].status = 'CADENCIA-ATIVA';
+    DB.saveLeads(leads);
+    logTouch(id, canal, 'toque', 'feito');
+  }
+
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
   celebrateMilestone(todayTouches);
   refreshView();
@@ -1801,6 +1864,7 @@ function selectCallCanal(btn) {
 function confirmCallResult(atendeu) {
   const id = _pendingCallId;
   const newToque = _pendingCallToque;
+  const stageToqueIdx = _pendingCallStageToqueIdx;
   if (!id) return;
   closeModal('modal-call');
 
@@ -1809,8 +1873,13 @@ function confirmCallResult(atendeu) {
   if (idx < 0) return;
 
   if (atendeu) {
-    leads[idx].diaToqueAtual = newToque;
-    leads[idx].proximoToque = calcNextTouch(leads[idx]);
+    leads[idx].diaToqueAtual = newToque; // backward compat
+    // S3: Per-stage cadence update
+    if (stageToqueIdx !== null && stageToqueIdx !== undefined) {
+      leads[idx].toqueNoStage = stageToqueIdx;
+      leads[idx].stageAtual = typeof getPlaybookStage === 'function' ? getPlaybookStage(leads[idx]) : leads[idx].stageAtual;
+    }
+    leads[idx].proximoToque = (typeof calcNextTouchByStage === 'function') ? calcNextTouchByStage(leads[idx]) : calcNextTouch(leads[idx]);
     leads[idx].ultimaAtualizacao = today();
     leads[idx].status = 'CADENCIA-ATIVA';
     DB.saveLeads(leads);
@@ -1823,6 +1892,7 @@ function confirmCallResult(atendeu) {
 
   _pendingCallId = null;
   _pendingCallToque = null;
+  _pendingCallStageToqueIdx = null;
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
   celebrateMilestone(todayTouches);
   refreshView();
@@ -1855,6 +1925,10 @@ function noShow(id) {
   leads[idx].status = 'CADENCIA-ATIVA';
   leads[idx].dataHoraDiagnostico = null;
   leads[idx].ultimaAtualizacao = today();
+  // S1: Reset per-stage cadence fields on no-show
+  leads[idx].toqueNoStage = 0;
+  leads[idx].dataInicioEtapa = today();
+  leads[idx].stageAtual = typeof getPlaybookStage === 'function' ? getPlaybookStage(leads[idx]) : 'frio';
   DB.saveLeads(leads);
   logTouch(id, 'LIGACAO', 'diagnostico', 'no-show');
   refreshView();
@@ -2741,7 +2815,8 @@ function saveLead(existingId) {
     const idx = leads.findIndex(l => l.id === existingId);
     if (idx < 0) return;
     // Pedro Valério: validar transição de status ao editar
-    if (status !== leads[idx].status) {
+    var statusChanged = (status !== leads[idx].status);
+    if (statusChanged) {
       const v = canAdvanceStatus(leads[idx], status);
       if (!v.ok) { showToast('🔒 ' + v.error); return; }
     }
@@ -2752,6 +2827,12 @@ function saveLead(existingId) {
       motivoNutricao: document.getElementById('fl-motivonutri')?.value || leads[idx].motivoNutricao,
       motivoPerdido: document.getElementById('fl-motivoperdido')?.value || leads[idx].motivoPerdido,
     };
+    // S1: Reset per-stage fields when status changes via edit
+    if (statusChanged) {
+      leads[idx].toqueNoStage = 0;
+      leads[idx].dataInicioEtapa = today();
+      leads[idx].stageAtual = typeof getPlaybookStage === 'function' ? getPlaybookStage(leads[idx]) : leads[idx].stageAtual;
+    }
   } else {
     const newLead = {
       id: uuid(), ...commonFields,
@@ -2762,8 +2843,12 @@ function saveLead(existingId) {
       dataRetornoNutricao: document.getElementById('fl-retornonutri')?.value || null,
       motivoNutricao: document.getElementById('fl-motivonutri')?.value || '',
       motivoPerdido: document.getElementById('fl-motivoperdido')?.value || '',
+      // S1: Cadence engine — per-stage fields
+      stageAtual: typeof getPlaybookStage === 'function' ? getPlaybookStage({status: status, fluxo: commonFields.fluxo}) : 'frio',
+      toqueNoStage: 0,
+      dataInicioEtapa: today(),
     };
-    newLead.proximoToque = calcNextTouch(newLead);
+    newLead.proximoToque = (typeof calcNextTouchByStage === 'function') ? calcNextTouchByStage(newLead) : calcNextTouch(newLead);
     leads.push(newLead);
   }
 
@@ -3336,7 +3421,84 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 <!-- Módulos extraídos -->
 <script src="ai.js"></script>
 <script src="playbook.js"></script>
-<script>init();</script>
+<script>
+// ═══════════════════════════════════════════════════
+// S2: calcNextTouchByStage — per-stage cadence engine
+// Precisa rodar DEPOIS de playbook.js (PB_STAGES, getPlaybookStage)
+// ═══════════════════════════════════════════════════
+function parseCadTiming(cadLabel) {
+  // Converte strings de timing do playbook em dias
+  // 'D1', 'D2', 'D4' etc → dias desde inicio da etapa
+  // '+24h', '+48h', '+72h', '+96h', '+120h' → dias relativos
+  // 'D30+', 'D60+', 'D90+' → dias
+  // 'D-1', 'D0', 'Resp.', 'Loop 1' etc → null (nao temporal)
+  if (!cadLabel || typeof cadLabel !== 'string') return null;
+  var s = cadLabel.trim();
+  // Formato D<N> (ex: D1, D2, D4, D7, D9, D12)
+  var mD = s.match(/^D(\d+)\s*/);
+  if (mD) return parseInt(mD[1]);
+  // Formato D<N>+ (ex: D30+, D60+, D90+)
+  var mDplus = s.match(/^D(\d+)\+/);
+  if (mDplus) return parseInt(mDplus[1]);
+  // Formato +<N>h (ex: +24h, +48h, +72h, +96h, +120h)
+  var mH = s.match(/^\+(\d+)h/);
+  if (mH) return Math.ceil(parseInt(mH[1]) / 24);
+  // Formato P<N> (ex: P1)
+  var mP = s.match(/^P(\d+)/);
+  if (mP) return parseInt(mP[1]);
+  // Nao temporal (Resp., Loop 1, 0-10min, Manha, D0, D-1, Thresh.)
+  return null;
+}
+
+function calcNextTouchByStage(lead) {
+  // Fallback se playbook nao disponivel
+  if (typeof PB_STAGES === 'undefined' || typeof getPlaybookStage === 'undefined') {
+    return calcNextTouch(lead);
+  }
+  var stage = getPlaybookStage(lead);
+  // Etapas sem cadencia temporal — retorna null
+  if (stage === 'diagnostico' || stage === 'negociacao') return null;
+  // Busca a entrada do stage no PB_STAGES
+  var stageIdx = -1;
+  for (var i = 0; i < PB_STAGES.length; i++) {
+    if (PB_STAGES[i].id === stage) { stageIdx = i; break; }
+  }
+  if (stageIdx < 0 || !PB_STAGES[stageIdx].cad) {
+    return calcNextTouch(lead);
+  }
+  var stageCad = PB_STAGES[stageIdx].cad;
+  var toqueIdx = (lead.toqueNoStage || 0);
+  // Cadencia completa neste stage
+  if (toqueIdx >= stageCad.length) return null;
+  // Para 'agendado': calcula retroativo a partir de dataHoraDiagnostico
+  if (stage === 'agendado' && lead.dataHoraDiagnostico) {
+    var diagDate = new Date(lead.dataHoraDiagnostico + 'T00:00:00');
+    if (!isNaN(diagDate.getTime())) {
+      // Cadencia do agendado tem D0, D-1, Manha — baseada na data do diagnostico
+      // Retorna a data do diagnostico como proximo toque
+      return lead.dataHoraDiagnostico;
+    }
+  }
+  // Busca o proximo toque (idx atual ou proximo) com timing valido
+  var baseDate = lead.dataInicioEtapa || lead.dataCriacao;
+  if (!baseDate) return calcNextTouch(lead);
+  var base = new Date(baseDate + 'T00:00:00');
+  if (isNaN(base.getTime())) return calcNextTouch(lead);
+  // Tenta encontrar dias a partir do toque atual
+  for (var t = toqueIdx; t < stageCad.length; t++) {
+    var dias = parseCadTiming(stageCad[t].d);
+    if (dias !== null) {
+      var nextDate = new Date(base);
+      nextDate.setDate(nextDate.getDate() + dias);
+      return nextDate.toISOString().split('T')[0];
+    }
+  }
+  // Nenhum timing temporal encontrado — fallback
+  return calcNextTouch(lead);
+}
+
+init();
+</script>
 
 <!-- PLAYBOOK MODAL -->
 <div class="modal-bg" id="modal-playbook">
