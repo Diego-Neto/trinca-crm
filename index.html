@@ -53,7 +53,43 @@
 
   <!-- CADENCIA -->
   <div id="cadencia-view" class="view">
+
+    <!-- HOJE: State Check inline -->
+    <div id="hoje-state-check" class="hoje-state" style="display:none">
+      <div class="hoje-state-title">Como voce esta hoje?</div>
+      <div class="hoje-slider-row">
+        <label>Humor</label>
+        <input type="range" min="1" max="10" value="7" id="hoje-humor" oninput="document.getElementById('hoje-humor-val').textContent=this.value">
+        <span id="hoje-humor-val">7</span>
+      </div>
+      <div class="hoje-slider-row">
+        <label>Energia</label>
+        <input type="range" min="1" max="10" value="7" id="hoje-energia" oninput="document.getElementById('hoje-energia-val').textContent=this.value">
+        <span id="hoje-energia-val">7</span>
+      </div>
+      <button onclick="salvarEstadoHoje()" class="hoje-state-btn">Salvar Estado</button>
+    </div>
+
+    <!-- HOJE: Banner de fase (aparece apos salvar estado) -->
     <div id="state-cadencia-banner" style="padding:12px 12px 0"></div>
+
+    <!-- HOJE: Resumo do dia -->
+    <div class="hoje-resumo" id="hoje-resumo" style="display:none">
+      <div class="hoje-stat"><div class="hoje-stat-num" id="hoje-toques">0</div><div class="hoje-stat-label">Toques</div></div>
+      <div class="hoje-stat"><div class="hoje-stat-num" id="hoje-diag">0</div><div class="hoje-stat-label">Diagnost.</div></div>
+      <div class="hoje-stat"><div class="hoje-stat-num" id="hoje-fups">0</div><div class="hoje-stat-label">Follow-ups</div></div>
+      <div class="hoje-stat hoje-stat-progress"><div class="hoje-stat-num" id="hoje-feitos">0/0</div><div class="hoje-stat-label">Feitos</div></div>
+    </div>
+
+    <!-- HOJE: Alertas inline -->
+    <div id="hoje-alertas"></div>
+
+    <!-- HOJE: Progresso do dia -->
+    <div class="hoje-progress" id="hoje-progress" style="display:none">
+      <div class="hoje-progress-label">Progresso do dia</div>
+      <div class="hoje-progress-bar"><div class="hoje-progress-fill" id="hoje-progress-fill"></div></div>
+    </div>
+
     <div class="cadencia-header">
       <div>
         <div class="view-title">Cadência do Dia</div>
@@ -95,32 +131,34 @@
   <div id="previsibilidade-view" class="view">
     <div style="margin-bottom:14px">
       <div class="view-title" style="margin-bottom:4px">Previsibilidade</div>
-      <div style="font-size:12px;color:var(--muted)">Engenharia reversa do funil</div>
+      <div style="font-size:12px;color:var(--muted)">Matemática do negócio + metas + funil</div>
     </div>
 
-    <div class="calc-box">
-      <div class="calc-title">📐 Calculadora de Meta</div>
-      <div class="calc-row">
-        <div class="calc-label">Meta de contratos/mês</div>
-        <input class="calc-input" type="number" id="meta-contratos" value="5" min="1" max="50" oninput="calcPrevisibilidade()">
-      </div>
-      <div class="calc-row">
-        <div class="calc-label">Dias úteis no mês</div>
-        <input class="calc-input" type="number" id="dias-uteis" value="22" min="10" max="30" oninput="calcPrevisibilidade()">
-      </div>
-      <div class="calc-result" id="calc-result"></div>
-    </div>
+    <!-- Sub-tabs -->
+    <div class="prev-tabs" id="prev-tabs"></div>
 
-    <div class="calc-box">
+    <!-- Sub-view: Metas & KPIs -->
+    <div id="prev-metas" class="prev-section"></div>
+
+    <!-- Sub-view: Trimestral -->
+    <div id="prev-trimestral" class="prev-section" style="display:none"></div>
+
+    <!-- Sub-view: O Mapa -->
+    <div id="prev-mapa" class="prev-section" style="display:none"></div>
+
+    <!-- Métricas da Semana (preservado) -->
+    <div class="calc-box" style="margin-top:14px">
       <div class="calc-title">📊 Métricas da Semana</div>
       <div id="week-metrics-form"></div>
     </div>
 
+    <!-- Desempenho vs Meta (preservado) -->
     <div class="calc-box">
       <div class="calc-title">📈 Desempenho vs Meta</div>
       <div id="performance-display"></div>
     </div>
 
+    <!-- Análise IA (preservado) -->
     <div class="calc-box">
       <div class="calc-title">🤖 Análise IA do Pipeline</div>
       <div style="font-size:12px;color:var(--muted2);margin-bottom:10px">Patrick Bet-David detecta gargalos e entrega 3 ações para os próximos 7 dias</div>
@@ -1318,7 +1356,114 @@ function renderPipeline() {
 // ═══════════════════════════════════════════════════
 // CADENCIA
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// HOJE — Header components (State Check, Resumo, Alertas, Progresso)
+// ═══════════════════════════════════════════════════
+
+function salvarEstadoHoje() {
+  var humor = parseInt(document.getElementById('hoje-humor').value);
+  var energia = parseInt(document.getElementById('hoje-energia').value);
+  var phase = getPhase(humor, energia);
+  DB.saveState({date: today(), humor: humor, energia: energia, phase: phase});
+
+  var history = DB.getStateHistory();
+  var existing = history.findIndex(function(h) { return h.date === today(); });
+  var entry = {date: today(), humor: humor, energia: energia, phase: phase};
+  if (existing >= 0) history[existing] = entry; else history.push(entry);
+  if (history.length > 30) history.shift();
+  DB.saveStateHistory(history);
+
+  updateStateDisplay();
+  renderCadencia();
+  showToast('Estado salvo! Humor: ' + humor + '/10 | Energia: ' + energia + '/10');
+}
+
+function renderHojeHeader() {
+  var t = today();
+  var savedState = DB.getState();
+  var stateSavedToday = savedState.date === t;
+
+  // A) State Check: mostrar ou esconder
+  var stateCheckEl = document.getElementById('hoje-state-check');
+  var bannerEl = document.getElementById('state-cadencia-banner');
+  if (stateCheckEl) {
+    stateCheckEl.style.display = stateSavedToday ? 'none' : 'block';
+  }
+
+  // Atualizar banner se estado salvo
+  if (stateSavedToday) {
+    updateCadenciaBanner();
+  } else if (bannerEl) {
+    bannerEl.innerHTML = '';
+  }
+
+  // Dados para resumo
+  var leads = DB.getLeads();
+  var activeLeads = leads.filter(function(l) { return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status); });
+  var withPrio = activeLeads.map(function(l) { return {lead: l, prio: getPriority(l)}; });
+
+  var countA = withPrio.filter(function(x) { return x.prio === 'A'; }).length;
+  var countB = withPrio.filter(function(x) { return x.prio === 'B'; }).length;
+
+  var diagHoje = leads.filter(function(l) {
+    return l.status === 'AGUARDANDO-DIAGNOSTICO' && l.dataHoraDiagnostico && l.dataHoraDiagnostico.startsWith(t);
+  }).length;
+
+  var fups = leads.filter(function(l) {
+    if (l.status !== 'PROPOSTA-ENVIADA') return false;
+    var diff = daysDiff(l.ultimaAtualizacao);
+    return diff !== null && diff <= -3;
+  }).length;
+
+  var touchlog = DB.getTouchlog();
+  var todayTouches = touchlog.filter(function(e) { return e.data === t; }).length;
+  var totalAB = countA + countB;
+
+  // B) Resumo do dia
+  var resumoEl = document.getElementById('hoje-resumo');
+  if (resumoEl) {
+    resumoEl.style.display = 'flex';
+    document.getElementById('hoje-toques').textContent = countA;
+    document.getElementById('hoje-diag').textContent = diagHoje;
+    document.getElementById('hoje-fups').textContent = fups;
+    document.getElementById('hoje-feitos').textContent = todayTouches + '/' + totalAB;
+  }
+
+  // C) Alertas inline
+  var alertasEl = document.getElementById('hoje-alertas');
+  if (alertasEl) {
+    var alerts = getAlerts();
+    if (alerts.length > 0) {
+      var alertColorMap = {purple: 'var(--purple)', yellow: 'var(--yellow)', red: 'var(--red)'};
+      var alertsHtml = alerts.map(function(a) {
+        var borderColor = alertColorMap[a.type] || 'var(--border)';
+        return '<div class="hoje-alert" style="border-left-color:' + borderColor + '">' +
+          '<div class="hoje-alert-title">' + a.title + '</div>' +
+          '<div class="hoje-alert-desc">' + a.desc + '</div>' +
+        '</div>';
+      }).join('');
+      alertasEl.innerHTML = alertsHtml;
+    } else {
+      alertasEl.innerHTML = '';
+    }
+  }
+
+  // D) Barra de progresso
+  var progressEl = document.getElementById('hoje-progress');
+  var fillEl = document.getElementById('hoje-progress-fill');
+  if (progressEl && fillEl) {
+    if (totalAB > 0) {
+      progressEl.style.display = 'block';
+      var pct = Math.min(100, Math.round((todayTouches / totalAB) * 100));
+      fillEl.style.width = pct + '%';
+    } else {
+      progressEl.style.display = 'none';
+    }
+  }
+}
+
 function renderCadencia() {
+  renderHojeHeader();
   document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
   const leads = DB.getLeads().filter(l => !['GANHO','PERDIDO','GELADEIRA'].includes(l.status));
 

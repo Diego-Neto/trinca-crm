@@ -765,3 +765,61 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .pb-cad-body{flex:1}
 .pb-cad-l{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
 .pb-cad-a{font-size:10px;color:var(--muted2);line-height:1.5}
+
+/* ═══════════════════════════════════════════════════ */
+/* HOJE — State Check, Resumo, Alertas, Progresso     */
+/* ═══════════════════════════════════════════════════ */
+.hoje-state{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px;margin:12px 12px 0
+}
+.hoje-state-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px}
+.hoje-slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hoje-slider-row label{font-size:12px;font-weight:600;color:var(--muted2);min-width:52px}
+.hoje-slider-row input[type="range"]{flex:1;accent-color:var(--purple);height:6px}
+.hoje-slider-row span{font-size:13px;font-weight:800;color:var(--text);min-width:20px;text-align:center}
+.hoje-state-btn{
+  width:100%;padding:8px;margin-top:4px;
+  background:linear-gradient(135deg,var(--purple),#6d28d9);color:#fff;
+  border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;
+  transition:opacity .2s
+}
+.hoje-state-btn:hover{opacity:.9}
+
+.hoje-resumo{
+  display:flex;gap:6px;margin:8px 12px 0;
+}
+.hoje-stat{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:8px 4px;text-align:center;flex:1;min-width:0
+}
+.hoje-stat-num{font-size:20px;font-weight:800;color:var(--text);line-height:1.2}
+.hoje-stat-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;margin-top:2px}
+.hoje-stat-progress .hoje-stat-num{color:var(--purple2)}
+
+#hoje-alertas{margin:8px 12px 0}
+.hoje-alert{
+  background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--border);
+  border-radius:6px;padding:6px 8px;margin-bottom:4px;
+}
+.hoje-alert-title{font-size:10px;font-weight:700;color:var(--text);line-height:1.3}
+.hoje-alert-desc{font-size:9px;color:var(--muted);line-height:1.3;margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.hoje-progress{margin:8px 12px 4px}
+.hoje-progress-label{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.hoje-progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.hoje-progress-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--purple),var(--purple2));
+  transition:width .4s ease;width:0
+}
+
+@media(max-width:480px){
+  .hoje-resumo{gap:4px;margin:6px 8px 0}
+  .hoje-stat{padding:6px 2px}
+  .hoje-stat-num{font-size:16px}
+  .hoje-state{margin:8px 8px 0;padding:10px}
+  #hoje-alertas{margin:6px 8px 0}
+  .hoje-progress{margin:6px 8px 4px}
+}
