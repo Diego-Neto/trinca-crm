@@ -4324,6 +4324,11 @@ function calcNextTouchByStage(lead) {
     if (dias !== null) {
       var nextDate = new Date(base);
       nextDate.setDate(nextDate.getDate() + dias);
+      // Garantir que próximo toque nunca caia no passado — mínimo amanhã
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0,0,0,0);
+      if (nextDate < tomorrow) nextDate.setTime(tomorrow.getTime());
       return nextDate.toISOString().split('T')[0];
     }
   }

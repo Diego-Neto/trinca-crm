@@ -37,6 +37,11 @@ function calcNextTouch(lead) {
   const d = new Date(lead.dataCriacao + 'T00:00:00');
   if (isNaN(d.getTime())) return null;
   d.setDate(d.getDate() + CADENCE_DAYS[next]);
+  // Garantir que próximo toque nunca caia no passado — mínimo amanhã
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0,0,0,0);
+  if (d < tomorrow) d.setTime(tomorrow.getTime());
   return d.toISOString().split('T')[0];
 }
 

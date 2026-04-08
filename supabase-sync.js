@@ -260,6 +260,7 @@ async function syncFromSupabase(retries = 3) {
       const leads = await SBLeads.loadAll();
       localStorage.setItem('tc_leads', JSON.stringify(leads));
       console.log(`[Trinca 4.0] ${leads.length} leads sincronizados do Supabase`);
+
       // Sync tasks
       try {
         const tasks = await _sb.from('tasks').select('*').order('created_at', { ascending: false });
@@ -268,6 +269,85 @@ async function syncFromSupabase(retries = 3) {
           leadId: t.lead_id, done: t.done, createdAt: t.created_at
         }))));
       } catch(e) { console.warn('[sync tasks]', e.message); }
+
+      // Sync state_history (streak/cadência do dia)
+      try {
+        const { data } = await _sb.from('state_history').select('*').order('data', { ascending: false }).limit(60);
+        if (data && data.length) {
+          const history = data.map(h => ({
+            date: h.data, humor: h.humor, energia: h.energia, phase: h.fase || null
+          }));
+          // Merge: manter entradas locais que ainda não foram pro Supabase
+          const localHistory = JSON.parse(localStorage.getItem('tc_state_history') || '[]');
+          const cloudDates = new Set(history.map(h => h.date));
+          const merged = [...history];
+          for (const lh of localHistory) {
+            if (!cloudDates.has(lh.date)) merged.push(lh);
+          }
+          merged.sort((a, b) => b.date.localeCompare(a.date));
+          localStorage.setItem('tc_state_history', JSON.stringify(merged));
+          // Atualizar estado do dia atual se existir no cloud
+          const todayISO = new Date().toISOString().split('T')[0];
+          const todayState = data.find(h => h.data === todayISO);
+          if (todayState) {
+            localStorage.setItem('tc_state', JSON.stringify({
+              date: todayState.data, humor: todayState.humor, energia: todayState.energia,
+              phase: todayState.fase || null
+            }));
+          }
+        }
+      } catch(e) { console.warn('[sync state_history]', e.message); }
+
+      // Sync debriefs
+      try {
+        const { data } = await _sb.from('debriefs').select('*').order('data', { ascending: false }).limit(30);
+        if (data && data.length) {
+          const debriefs = data.map(d => ({
+            id: d.id, date: d.data, humor: d.humor, energia: d.energia,
+            phase: d.fase, pilarFraco: d.pilar_fraco, leadId: d.lead_id,
+            ...(d.perguntas || {})
+          }));
+          const localDebriefs = JSON.parse(localStorage.getItem('tc_debriefs') || '[]');
+          const cloudIds = new Set(debriefs.map(d => d.id));
+          const merged = [...debriefs];
+          for (const ld of localDebriefs) {
+            if (!cloudIds.has(ld.id)) merged.push(ld);
+          }
+          localStorage.setItem('tc_debriefs', JSON.stringify(merged));
+        }
+      } catch(e) { console.warn('[sync debriefs]', e.message); }
+
+      // Sync touchlog
+      try {
+        const { data } = await _sb.from('touchlog').select('*').order('data', { ascending: false }).limit(200);
+        if (data && data.length) {
+          const touchlog = data.map(t => ({
+            leadId: t.lead_id, canal: t.canal, tipo: t.tipo,
+            resultado: t.resultado, data: t.data
+          }));
+          const localLog = JSON.parse(localStorage.getItem('tc_touchlog') || '[]');
+          // Merge por chave composta (leadId+data+canal)
+          const cloudKeys = new Set(touchlog.map(t => `${t.leadId}|${t.data}|${t.canal}`));
+          const merged = [...touchlog];
+          for (const lt of localLog) {
+            const key = `${lt.leadId}|${lt.data}|${lt.canal}`;
+            if (!cloudKeys.has(key)) merged.push(lt);
+          }
+          localStorage.setItem('tc_touchlog', JSON.stringify(merged.slice(-800)));
+        }
+      } catch(e) { console.warn('[sync touchlog]', e.message); }
+
+      // Sync config
+      try {
+        const { data } = await _sb.from('config').select('*').limit(1).single();
+        if (data) {
+          localStorage.setItem('tc_config', JSON.stringify({
+            meta: data.meta || 5, diasUteis: data.dias_uteis || 22
+          }));
+        }
+      } catch(e) { /* config pode não existir ainda */ }
+
+      console.log('[Trinca 4.0] Sync completo (leads, tasks, state, debriefs, touchlog, config)');
       return;
     } catch (e) {
       if (i < retries - 1) {
@@ -567,10 +647,88 @@ async function doResetPassword() {
   }
 }
 
+// ─── TELA DE REDEFINIÇÃO DE SENHA ────────────────────
+function showResetPasswordScreen() {
+  let screen = document.getElementById('reset-pw-screen');
+  if (!screen) {
+    screen = document.createElement('div');
+    screen.id = 'reset-pw-screen';
+    screen.innerHTML = `
+      <style>
+        #reset-pw-screen {
+          position: fixed; inset: 0; z-index: 10000;
+          background: #07080d;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .reset-box {
+          width: 100%; max-width: 360px; padding: 32px 24px;
+          background: #0f1117; border: 1px solid #1f2937; border-radius: 14px;
+          margin: 16px;
+        }
+      </style>
+      <div class="reset-box">
+        <div class="login-logo">Nova <span>Senha</span></div>
+        <div class="login-sub" style="margin-bottom:20px">Digite sua nova senha abaixo</div>
+        <label class="login-label">Nova senha</label>
+        <input class="login-input" type="password" id="reset-pw-new" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        <label class="login-label">Confirmar senha</label>
+        <input class="login-input" type="password" id="reset-pw-confirm" placeholder="Repita a senha" autocomplete="new-password">
+        <button class="login-btn" id="reset-pw-btn" onclick="doUpdatePassword()">Salvar nova senha</button>
+        <div class="login-error" id="reset-pw-error"></div>
+        <div class="login-error" id="reset-pw-success" style="color:#10b981;"></div>
+      </div>
+    `;
+    document.body.appendChild(screen);
+  }
+  screen.style.display = 'flex';
+  // Esconder login se estiver visível
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) loginScreen.style.display = 'none';
+  setTimeout(() => {
+    const el = document.getElementById('reset-pw-new');
+    if (el) el.focus();
+  }, 100);
+}
+
+async function doUpdatePassword() {
+  const newPw = document.getElementById('reset-pw-new').value;
+  const confirmPw = document.getElementById('reset-pw-confirm').value;
+  const btn = document.getElementById('reset-pw-btn');
+  const err = document.getElementById('reset-pw-error');
+  const suc = document.getElementById('reset-pw-success');
+  err.style.display = 'none'; suc.style.display = 'none';
+
+  if (!newPw || newPw.length < 6) {
+    err.style.display = 'block'; err.textContent = 'A senha deve ter pelo menos 6 caracteres.'; return;
+  }
+  if (newPw !== confirmPw) {
+    err.style.display = 'block'; err.textContent = 'As senhas não coincidem.'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const { error } = await _sb.auth.updateUser({ password: newPw });
+    if (error) throw error;
+    suc.style.display = 'block'; suc.textContent = 'Senha alterada com sucesso!';
+    setTimeout(() => {
+      const screen = document.getElementById('reset-pw-screen');
+      if (screen) screen.style.display = 'none';
+      // Continuar para o app normalmente
+    }, 1500);
+  } catch(e) {
+    err.style.display = 'block'; err.textContent = 'Erro: ' + e.message;
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+  }
+}
+
 // Permitir Enter no input de senha
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && document.getElementById('login-screen')?.style.display !== 'none') {
     doLogin();
+  }
+  if (e.key === 'Enter' && document.getElementById('reset-pw-screen')?.style.display === 'flex') {
+    doUpdatePassword();
   }
 });
 
@@ -580,6 +738,13 @@ document.addEventListener('keydown', (e) => {
 (async function bootstrap() {
   // Escutar mudanças de auth
   SBAuth.onAuthChange(async (event, session) => {
+    // Detectar recovery de senha — mostrar tela para definir nova senha
+    if (event === 'PASSWORD_RECOVERY' && session?.user) {
+      _currentUser = session.user;
+      showResetPasswordScreen();
+      return;
+    }
+
     if (session?.user) {
       _currentUser = session.user;
       // Determinar role: gestores pré-autorizados
@@ -615,10 +780,16 @@ document.addEventListener('keydown', (e) => {
       // Flush pendentes + sync ao retornar ao app
       PendingQueue.flush().catch(() => {});
       window.addEventListener('focus', () => {
-        if (_currentUser) { PendingQueue.flush().catch(() => {}); syncFromSupabase(); }
+        if (_currentUser) {
+          PendingQueue.flush().catch(() => {});
+          syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
+        }
       });
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && _currentUser) { PendingQueue.flush().catch(() => {}); syncFromSupabase(); }
+        if (!document.hidden && _currentUser) {
+          PendingQueue.flush().catch(() => {});
+          syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
+        }
       });
       // Flush quando voltar online
       window.addEventListener('online', () => {
