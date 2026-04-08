@@ -50,13 +50,13 @@ var PB_STAGES = [
    desc:'Nunca respondeu. Ligacao primeiro — WPP e fallback. You are a sifter, not an alchemist. 3 tentativas de ligacao antes de mudar canal.',
    steps:['Liga de manha — ligacao primeiro (Aaron Ross).','Se nao atendeu: WPP em 15min — curiosity gap, nao pitch.','Objetivo unico: gerar resposta ou agendar diagnostico.','Nunca dois contatos no mesmo canal no mesmo dia.'],
    scripts:{
-    empresario:'"Oi [Nome], aqui e o Diego da Realize. Vi voce no grupo [FACIAP/CDL/ACICLA] — trabalho com empresarios que querem crescer sem pagar o custo do banco. Posso te contar o motivo do contato em 2 minutos?"',
-    liberal:'"Oi Dr(a). [Nome], Diego da Realize. Trabalho com profissionais liberais que querem patrimonio fisico fora do consultorio sem imobilizar capital. 15 minutos essa semana?"',
-    investidor:'"Oi [Nome], Diego aqui. Voce tem ativos financeiros — quero te mostrar como adicionar imovel fisico a carteira sem resgatar nada. 2 minutos?"',
-    servidor:'"Oi [Nome], Diego da Realize. Estabilidade de renda e o perfil mais forte que existe pra uma estrategia que banco nao oferece. Dois minutinhos?"',
-    assalariado:'"Oi [Nome], Diego aqui. Trabalho com pessoas que querem sair do aluguel sem precisar de entrada grande. 2 minutos pra te explicar como funciona?"',
-    herdeiro:'"Oi [Nome], Diego da Realize. Voce tem um montante disponivel e quer fazer ele trabalhar com seguranca — e exatamente o que faco. 15 minutos?"',
-    jovem:'"Oi [Nome], Diego aqui. 22 a 32 anos e o melhor momento da vida pra comecar patrimonio. Tenho uma estrategia sem entrada grande. 2 minutos?"'
+    empresario:'"Oi [Nome], aqui e o Diego da Realize. Vi voce no grupo [FACIAP/CDL/ACICLA] — ajudo empresarios a conquistar renda de ate 10 mil reais com casas de aluguel, sem pagar juros bancarios. Posso te contar como em 2 minutos?"',
+    liberal:'"Oi Dr(a). [Nome], Diego da Realize. Ajudo profissionais liberais a construir renda de ate 10 mil com imoveis de aluguel — sem juros de banco e sem imobilizar capital. 15 minutos essa semana?"',
+    investidor:'"Oi [Nome], Diego aqui. Voce ja tem ativos financeiros — quero te mostrar como adicionar imoveis que geram ate 10 mil de renda mensal, sem juros bancarios. 2 minutos?"',
+    servidor:'"Oi [Nome], Diego da Realize. Ajudo servidores a conquistar renda extra de ate 10 mil com casas de aluguel, sem pagar juros de banco. Dois minutinhos?"',
+    assalariado:'"Oi [Nome], Diego aqui. Ajudo pessoas a conquistar renda de ate 10 mil reais com casas de aluguel sem pagar juros bancarios. 2 minutos pra te explicar como funciona?"',
+    herdeiro:'"Oi [Nome], Diego da Realize. Com o montante que voce tem, da pra transformar em casas que geram ate 10 mil de renda mensal — sem juros de banco. 15 minutos?"',
+    jovem:'"Oi [Nome], Diego aqui. Ajudo jovens a comecar a construir renda com casas de aluguel — ate 10 mil por mes, sem juros bancarios e sem entrada grande. 2 minutos?"'
    },
    cad:[
     {d:'D1 \u2600',l:'Ligacao manha',a:'Canal primario. CHAMP nos primeiros 90s se atendeu. Objetivo: agendar diagnostico. Taxa: 1:7 ICP / 1:10 geral.'},
