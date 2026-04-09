@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════
 
 var _cache = {};
+var _dbInstance = null;
 var _DB_NAME = 'trinca_certeza';
 var _DB_VERSION = 1;
 var _STORE = 'kv';
@@ -26,10 +27,15 @@ var _DEFAULTS = {
 // --- IndexedDB helpers (async, background) ---
 
 function _openIDB() {
+  if (_dbInstance) return Promise.resolve(_dbInstance);
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(_DB_NAME, _DB_VERSION);
     req.onupgradeneeded = () => req.result.createObjectStore(_STORE);
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      _dbInstance = req.result;
+      _dbInstance.onclose = () => { _dbInstance = null; };
+      resolve(_dbInstance);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -125,6 +131,15 @@ _migrateToIDB();
 var DB = {
   getLeads: () => JSON.parse(_get('tc_leads') || '[]'),
   saveLeads: (l) => _set('tc_leads', JSON.stringify(l)),
+  saveLead: function(lead) {
+    lead._syncVersion = (lead._syncVersion || 0) + 1;
+    lead.ultimaAtualizacao = new Date().toISOString().split('T')[0];
+    var leads = this.getLeads();
+    var idx = leads.findIndex(function(l) { return l.id === lead.id; });
+    if (idx >= 0) leads[idx] = lead; else leads.push(lead);
+    this.saveLeads(leads);
+    return lead;
+  },
   getConfig: () => JSON.parse(_get('tc_config') || '{"meta":5,"diasUteis":22}'),
   saveConfig: (c) => _set('tc_config', JSON.stringify(c)),
   getState: () => {

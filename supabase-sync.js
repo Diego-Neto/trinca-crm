@@ -96,6 +96,7 @@ const SBLeads = {
       notas:                  lead.notas || null,
       data_criacao:           lead.dataCriacao || new Date().toISOString().split('T')[0],
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
+      _sync_version:          lead._syncVersion || 0,
     };
   },
 
@@ -130,6 +131,7 @@ const SBLeads = {
       notas:                row.notas || '',
       dataCriacao:          row.data_criacao,
       ultimaAtualizacao:    row.ultima_atualizacao,
+      _syncVersion:         row._sync_version || 0,
       _vendedorId:          row.vendedor_id, // referência para gestor
     };
   },
@@ -273,10 +275,18 @@ async function syncFromSupabase(retries = 3) {
       for (const cl of cloudLeads) {
         cloudIds.add(cl.id);
         const ll = localMap[cl.id];
-        if (ll && ll.ultimaAtualizacao && cl.ultimaAtualizacao && ll.ultimaAtualizacao > cl.ultimaAtualizacao) {
-          // Local é mais recente — manter local e enviar pro Supabase
-          merged.push(ll);
-          SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+        if (ll) {
+          // Desempate: data > _syncVersion > cloud ganha
+          const localNewer = ll.ultimaAtualizacao > cl.ultimaAtualizacao;
+          const sameDate = ll.ultimaAtualizacao === cl.ultimaAtualizacao;
+          const localHigherVersion = (ll._syncVersion || 0) > (cl._syncVersion || 0);
+          if (localNewer || (sameDate && localHigherVersion)) {
+            // Local é mais recente — manter local e enviar pro Supabase
+            merged.push(ll);
+            SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+          } else {
+            merged.push(cl);
+          }
         } else {
           merged.push(cl);
         }
@@ -529,6 +539,13 @@ function patchDBForSupabase() {
   DB.saveLeads = function(leads) {
     originalSaveLeads(leads);
     SyncStatus.track('leads', SBLeads.upsertBatch(leads), leads);
+  };
+
+  const originalSaveLead = DB.saveLead.bind(DB);
+  DB.saveLead = function(lead) {
+    const saved = originalSaveLead(lead);
+    SyncStatus.track('leads', SBLeads.upsert(saved), [saved]);
+    return saved;
   };
 
   const originalSaveDebriefs = DB.saveDebriefs.bind(DB);
