@@ -5,4 +5,7 @@
 .claude/skills
 .claude/sessions
 squads
-node_modules
+node_modules/
+
+# Screenshots de debug na raiz
+/*.png
