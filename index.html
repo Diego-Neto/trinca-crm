@@ -166,6 +166,12 @@
     <!-- Sub-view: O Mapa -->
     <div id="prev-mapa" class="prev-section" style="display:none"></div>
 
+    <!-- Funil de Conversão + KPIs -->
+    <div id="prev-funil" class="calc-box" style="margin-top:14px">
+      <div class="calc-title">📊 Funil de Conversão</div>
+      <div id="funil-content"></div>
+    </div>
+
     <!-- Métricas do Dia -->
     <div class="calc-box" style="margin-top:14px">
       <div class="calc-title">📅 Métricas do Dia</div>
@@ -2793,6 +2799,9 @@ function advanceLead(id, newStatus) {
   }
   leads[idx].status = newStatus;
   leads[idx].ultimaAtualizacao = today();
+  if (newStatus === 'GANHO') leads[idx].dataGanho = today();
+  if (newStatus === 'PERDIDO') leads[idx].dataPerda = today();
+  if (newStatus === 'GELADEIRA') leads[idx].dataGeladeira = today();
   // S1: Reset per-stage cadence fields on status change
   leads[idx].toqueNoStage = 0;
   leads[idx].dataInicioEtapa = today();
@@ -4741,6 +4750,15 @@ async function init() {
     // GitHub Pages sem sessão — NÃO carrega demo, espera o login + sync
     console.log('[Trinca 4.0] Sem sessão — aguardando login para carregar leads do Supabase');
   }
+
+  // Sprint 1A: Migração — preenche dataGanho/dataPerda em leads antigos
+  var migrLeads = DB.getLeads();
+  var migrou = false;
+  migrLeads.forEach(function(l) {
+    if (l.status === 'GANHO' && !l.dataGanho) { l.dataGanho = l.ultimaAtualizacao || l.dataCriacao; migrou = true; }
+    if (l.status === 'PERDIDO' && !l.dataPerda) { l.dataPerda = l.ultimaAtualizacao || l.dataCriacao; migrou = true; }
+  });
+  if (migrou) DB.saveLeads(migrLeads);
 
   const savedState = DB.getState();
   const h = savedState.date === today() ? (savedState.humor || 7) : 7;

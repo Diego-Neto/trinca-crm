@@ -98,6 +98,8 @@ const SBLeads = {
       notas:                  lead.notas || null,
       data_criacao:           lead.dataCriacao || new Date().toISOString().split('T')[0],
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
+      data_ganho:             lead.dataGanho || null,
+      data_perda:             lead.dataPerda || null,
       _sync_version:          lead._syncVersion || 0,
     };
   },
@@ -133,6 +135,8 @@ const SBLeads = {
       notas:                row.notas || '',
       dataCriacao:          row.data_criacao,
       ultimaAtualizacao:    row.ultima_atualizacao,
+      dataGanho:            row.data_ganho,
+      dataPerda:            row.data_perda,
       _syncVersion:         row._sync_version || 0,
       _vendedorId:          row.vendedor_id, // referência para gestor
     };
