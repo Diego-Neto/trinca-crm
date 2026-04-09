@@ -113,7 +113,24 @@ function canAdvanceStatus(lead, newStatus, motivo) {
   if (lead.status === 'PERDIDO' && newStatus === 'CADENCIA-ATIVA' && !motivo) {
     return {ok:false, error:'Informe o motivo da reativação para mover de Perdido → Cadência Ativa.'};
   }
+  // CHAMP gate: bloqueia DIAGNOSTICO se score < 4
+  if (newStatus === 'AGUARDANDO-DIAGNOSTICO') {
+    var score = calcChampScore(lead);
+    if (score < 4) {
+      return {ok:false, error:'Score CHAMP insuficiente ('+score+'/12). Mínimo 4 para agendar diagnóstico. Preencha a qualificação CHAMP no cadastro do lead.'};
+    }
+  }
   return {ok:true};
+}
+
+// ═══════════════════════════════════════════════════
+// CHAMP Scoring (0-12)
+// C = Challenges (0-3), H = Authority (0-3),
+// A = Money (0-3), M = Prioritization (0-3)
+// ═══════════════════════════════════════════════════
+function calcChampScore(lead) {
+  return (parseInt(lead.champC)||0) + (parseInt(lead.champH)||0) +
+         (parseInt(lead.champA)||0) + (parseInt(lead.champM)||0);
 }
 
 // Export para Node.js (testes) — no browser são globais automaticamente
@@ -122,6 +139,7 @@ if (typeof module !== 'undefined' && module.exports) {
     esc, uuid, today, formatDate, daysDiff,
     CADENCE_DAYS, calcNextTouch,
     getPhase, getPriority,
-    STATUS_FLOW_ALLOWED, STATUS_LABELS, canAdvanceStatus
+    STATUS_FLOW_ALLOWED, STATUS_LABELS, canAdvanceStatus,
+    calcChampScore
   };
 }

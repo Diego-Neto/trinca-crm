@@ -4,7 +4,8 @@
 
 var PB_TAG_TO_ICP = {
   'PERFIL-EMPRESARIA':'empresario','PERFIL-LIBERAL':'liberal','PERFIL-INVESTIDOR':'investidor',
-  'PERFIL-SERVIDOR':'servidor','PERFIL-ASSALARIADO':'assalariado','PERFIL-HERDEIRO':'herdeiro','PERFIL-JOVEM':'jovem'
+  'PERFIL-SERVIDOR':'servidor','PERFIL-ASSALARIADO':'assalariado','PERFIL-HERDEIRO':'herdeiro','PERFIL-JOVEM':'jovem',
+  'PERFIL-DIVORCIADO':'divorciado','PERFIL-APOSENTADO':'aposentado'
 };
 
 var PB_ICPS = {
@@ -50,27 +51,31 @@ var PB_STAGES = [
    desc:'Nunca respondeu. Ligacao primeiro — WPP e fallback. You are a sifter, not an alchemist. 3 tentativas de ligacao antes de mudar canal.',
    steps:['Liga de manha — ligacao primeiro (Aaron Ross).','Se nao atendeu: WPP em 15min — curiosity gap, nao pitch.','Objetivo unico: gerar resposta ou agendar diagnostico.','Nunca dois contatos no mesmo canal no mesmo dia.'],
    scripts:{
-    empresario:'"Oi [Nome], aqui e o Diego da Realize. Vi voce no grupo [FACIAP/CDL/ACICLA] — ajudo empresarios a conquistar renda de ate 10 mil reais com casas de aluguel, sem pagar juros bancarios. Posso te contar como em 2 minutos?"',
-    liberal:'"Oi Dr(a). [Nome], Diego da Realize. Ajudo profissionais liberais a construir renda de ate 10 mil com imoveis de aluguel — sem juros de banco e sem imobilizar capital. 15 minutos essa semana?"',
-    investidor:'"Oi [Nome], Diego aqui. Voce ja tem ativos financeiros — quero te mostrar como adicionar imoveis que geram ate 10 mil de renda mensal, sem juros bancarios. 2 minutos?"',
-    servidor:'"Oi [Nome], Diego da Realize. Ajudo servidores a conquistar renda extra de ate 10 mil com casas de aluguel, sem pagar juros de banco. Dois minutinhos?"',
-    assalariado:'"Oi [Nome], Diego aqui. Ajudo pessoas a conquistar renda de ate 10 mil reais com casas de aluguel sem pagar juros bancarios. 2 minutos pra te explicar como funciona?"',
-    herdeiro:'"Oi [Nome], Diego da Realize. Com o montante que voce tem, da pra transformar em casas que geram ate 10 mil de renda mensal — sem juros de banco. 15 minutos?"',
-    jovem:'"Oi [Nome], Diego aqui. Ajudo jovens a comecar a construir renda com casas de aluguel — ate 10 mil por mes, sem juros bancarios e sem entrada grande. 2 minutos?"'
+    empresario:'"Sabe quanto um empresario perde por ano pagando juros de banco pra girar o caixa? Em media R$48 mil. Pessoas como voce ja resolveram isso — eu sou o Diego, da Realize, e em 2 minutos te mostro como."',
+    liberal:'"Se voce parar de atender 3 meses, qual e sua protecao patrimonial fora do consultorio? A maioria dos profissionais liberais que atendo nao tinha — ate resolver. Eu sou o Diego, da Realize. 15 minutos essa semana?"',
+    investidor:'"Sua carteira tem papel, tem renda fixa — mas quanto do seu patrimonio sobrevive a uma crise imobiliaria? Investidores como voce ja adicionaram essa camada. Eu sou o Diego, da Realize. 2 minutos?"',
+    servidor:'"Voce tem a renda mais estavel do pais — mas em 10 anos, qual e o patrimonio que sobra? Servidores como voce ja transformaram estabilidade em tijolo. Eu sou o Diego, da Realize. Dois minutinhos?"',
+    assalariado:'"Quanto voce pagou de aluguel nos ultimos 12 meses? Esse dinheiro sumiu. Pessoas na sua situacao ja redirecionaram isso pra patrimonio proprio. Eu sou o Diego, da Realize. 2 minutos pra te mostrar como?"',
+    herdeiro:'"Um montante parado perde pra inflacao todo mes — e a pior decisao e nao decidir. Pessoas como voce ja transformaram isso em renda de aluguel segura. Eu sou o Diego, da Realize. 15 minutos?"',
+    jovem:'"Com 25 anos, cada mes que passa sem construir patrimonio custa caro la na frente. Jovens como voce ja comecaram — sem entrada grande. Eu sou o Diego, da Realize. 2 minutos?"'
    },
    cad:[
-    {d:'D1 \u2600',l:'Ligacao manha',a:'Canal primario. CHAMP nos primeiros 90s se atendeu. Objetivo: agendar diagnostico. Taxa: 1:7 ICP / 1:10 geral.'},
-    {d:'D1 \uD83C\uDF19',l:'WPP tarde',a:'Fallback se nao atendeu. "Tentei te ligar — [curiosity gap]. Quinta ou sexta ficam bom?" Sem mencionar produto.'},
-    {d:'D2',l:'WPP leve',a:'"Ainda faz sentido a gente conversar essa semana?" Sem mencionar D1. Tom neutro.'},
-    {d:'D4',l:'Ligacao',a:'Angulo diferente da D1. Se nao atendeu: sem WPP hoje. Registra no CRM.'},
-    {d:'D7',l:'Instagram',a:'Curte > comenta algo genuino > DM: "Vi seu post — interessante. Quando tiver 15min?"'},
-    {d:'D9',l:'Ligacao final',a:'Tom completamente diferente. Muda o gatilho. Ultima tentativa ativa.'},
-    {d:'D12',l:'Encerramento',a:'"Nao quero insistir — quando mudar o momento, to aqui." > GELADEIRA D30+'}
+    {d:'D1 \u2600',l:'Ligacao manha — CURIOSIDADE',a:'Canal primario. Curiosity gap puro. CHAMP nos primeiros 90s se atendeu. Objetivo: gerar interesse. Taxa: 1:7 ICP / 1:10 geral.'},
+    {d:'D1 \uD83C\uDF19',l:'WPP tarde — CURIOSIDADE',a:'Fallback se nao atendeu. "Tentei te ligar — [curiosity gap com dor do ICP]. Quinta ou sexta ficam bom?" Sem mencionar produto.'},
+    {d:'D2',l:'WPP — DOR',a:'Ancora na dor especifica do ICP. "Voce sabia que [dado real sobre a dor]?" Uma pergunta que incomoda. Sem mencionar D1.'},
+    {d:'D4',l:'Ligacao — CUSTO DA INACAO',a:'Angulo: quanto custa nao agir. "Cada mes que passa, [custo concreto da inacao pro ICP]." Se nao atendeu: sem WPP hoje. Registra no CRM.'},
+    {d:'D7',l:'Instagram — PROVA SOCIAL',a:'Curte > comenta algo genuino > DM com case: "Vi seu post. Atendi alguem na sua situacao que [resultado concreto]. Quando tiver 15min?"'},
+    {d:'D9',l:'WPP — URGENCIA',a:'Gatilho de escassez real: "Grupo novo abrindo / condicao especial ate [data]. Lembrei de voce." So se verdadeiro.'},
+    {d:'D11',l:'Ligacao — URGENCIA FINAL',a:'Tom completamente diferente. Muda o gatilho. Ultima tentativa ativa. "Antes de encerrar seu contato, queria te dar uma ultima oportunidade."'},
+    {d:'D12',l:'WPP — BREAK-UP',a:'"[Nome], nao quero insistir. Se um dia esse cenario mudar, to aqui. Tudo de bom pra voce." > GELADEIRA D30+. Tom respeitoso, porta aberta.'}
    ],
    objs:[
     {q:'"Nao tenho interesse"',s:'Nao sabe o que voce faz — rejeita a imagem, nao o produto.',d:'Curiosity gap + porta aberta. Nunca defende.\n"Faz sentido — a maioria pensa que consorcio e compra parcelada. O que faco e diferente: alavancagem patrimonial sem juros. Se um dia esse contexto mudar, to aqui."'},
     {q:'"Agora nao e bom momento"',s:'Agenda ou prioridade? Separa antes de responder.',d:'"E mais a agenda cheia ou esse assunto nao esta no radar agora? Pergunto porque a resposta muda o que posso fazer."\nSe prioridade: "Se voce seguir do jeito que esta por 12 meses — o que voce sente que pode travar?"'},
-    {q:'"Me manda material"',s:'Fuga — nao quer parar a conversa agora.',d:'"Seria generico demais. O que faco depende do cenario de cada pessoa. 15 minutos. Quinta ou sexta?"'}
+    {q:'"Me manda material"',s:'Fuga — nao quer parar a conversa agora.',d:'"Seria generico demais. O que faco depende do cenario de cada pessoa. 15 minutos. Quinta ou sexta?"'},
+    {q:'"Consorcio demora muito pra contemplar"',s:'Confunde consorcio de compra com estrategia patrimonial.',d:'"A maioria pensa isso — porque pensa em consorcio antigo. Aqui a logica e diferente: lance estrategico + FGTS + fundo de reserva. Pessoas que atendo foram contempladas em 3-8 meses. 15 minutos pra te mostrar como funciona?"'},
+    {q:'"E se eu perder o emprego?"',s:'Medo de compromisso longo sem protecao.',d:'"Pergunta justa — e a primeira que todo mundo faz. O consorcio tem seguro e fundo de reserva. E se voce compara: aluguel voce paga do mesmo jeito e nao sobra nada. Aqui pelo menos constroi patrimonio. Posso te mostrar a protecao em 5 minutos."'},
+    {q:'"Ja tive experiencia ruim com consorcio"',s:'Trauma de modelo antigo ou administradora ruim.',d:'"Entendo — muita gente passou por isso com administradoras pequenas ou sem estrategia de lance. O que faco e completamente diferente: planejamento patrimonial com as maiores administradoras do pais. Me conta o que aconteceu — te mostro como evitamos isso."'}
    ],
    crm:'DOR: desconhecida\nSTATUS: D[X] \u00B7 [canal] \u00B7 sem resposta\nPROXIMO: [canal] \u00B7 D[X+1] \u00B7 [horario]',
    lo:'2 WPPs frios personalizados. Sem ligar. Alimenta pipeline.',
@@ -89,9 +94,12 @@ var PB_STAGES = [
     jovem:'"Que bom! Me fala: qual e sua renda mensal hoje e em quanto tempo voce quer ter o primeiro patrimonio fisico?"'
    },
    cad:[
-    {d:'Resp.',l:'Resposta imediata',a:'Responde ao que ele/ela trouxe + pergunta CHAMP na mesma mensagem.'},
-    {d:'+24h',l:'Se parou',a:'Ancora na ultima dor revelada. Angulo novo. Nunca "oi tudo bem".'},
-    {d:'+48h',l:'Alterna canal',a:'Ligacao. Tom: verificando, nao cobrando. "So confirmando se recebeu."'}
+    {d:'Resp.',l:'Resposta imediata',a:'Responde ao que ele/ela trouxe + pergunta CHAMP na mesma mensagem. Maximo 5min de delay.'},
+    {d:'+24h',l:'Ancora na dor',a:'Retoma a dor que revelou com angulo novo. "Voce mencionou [X] — isso ainda esta pesando?" Nunca "oi tudo bem".'},
+    {d:'+48h',l:'Alterna canal — Ligacao',a:'Liga. Tom: verificando, nao cobrando. "So confirmando se recebeu — queria entender melhor o que voce falou sobre [dor]."'},
+    {d:'+72h',l:'Prova social',a:'WPP com case real. "Atendi alguem na sua situacao que [resultado]. Quando posso te mostrar como funciona?"'},
+    {d:'+96h',l:'Custo da inacao',a:'"Voce mencionou [dor]. Cada mes que passa sem resolver, [custo concreto]. So quero que voce tenha essa clareza."'},
+    {d:'+120h',l:'CTA final ou Geladeira',a:'"[Nome], ultima mensagem sobre isso. Se fizer sentido, me avisa. Se nao — sem problema nenhum, to aqui quando o momento mudar." Se nao responder > GELADEIRA.'}
    ],
    objs:[
     {q:'"Vou pensar"',s:'Objecao escondida — nao verbalizou o que trava.',d:'"A ideia em si faz sentido pra voce?" Se sim: "O que falta pra ir em frente?" A resposta aponta o Ten (Certeza) fraco.'},
@@ -279,6 +287,11 @@ var PB_STAGES = [
     {d:'D45',l:'Check-in leve',a:'"O cenario mudou de la pra ca? Quando fizer sentido, a porta ta aberta."'},
     {d:'D60',l:'Gancho externo',a:'Noticia do mercado, mudanca de Selic, produto novo. Ponte pra reabrir conversa.'}
    ],
+   cadPosAguardando:[
+    {d:'R-7',l:'Aquecimento pre-retorno',a:'"[Nome], semana que vem chega a data que voce mencionou. Vi um caso parecido com o seu que pode te interessar — te mando?" Tom leve, conteudo relevante.'},
+    {d:'R-3',l:'Ancora na dor + dado novo',a:'"Lembra que voce falou sobre [dor]? Desde nossa conversa, [dado novo do mercado/Selic/INCC]. Quinta ou sexta pra gente retomar?"'},
+    {d:'R-1',l:'CTA direto',a:'"[Nome], amanha e o dia que voce marcou. Tenho 15 minutos as [hora] ou [hora] — qual fica melhor pra voce?" Duas opcoes. Sem pressao.'}
+   ],
    objs:[
     {q:'"Nao e o momento"',s:'Timing genuino — respeite.',d:'"Entendo perfeitamente. Posso te dar um toque em [data]? Sem compromisso — so pra nao perder o timing."'},
     {q:'Nao responde conteudo',s:'Nao esta engajado — pode estar frio.',d:'Mantenha 1 toque por mes. Se 3 meses sem resposta, mova pra Geladeira.'},
@@ -390,6 +403,14 @@ function renderPlaybookContent() {
       return '<div class="pb-cad-item"><div class="pb-cad-d">' + c.d + '</div><div class="pb-cad-body"><div class="pb-cad-l">' + c.l + '</div><div class="pb-cad-a">' + c.a + '</div></div></div>';
     }).join('');
     cadHtml = '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\uD83D\uDCDE Cadencia (' + stage.cad.length + ' touchpoints)</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody"><div class="pb-cad-list">' + cadItems + '</div></div></div>';
+  }
+
+  // Cadencia pos-Aguardando (pre-retorno)
+  if (stage.cadPosAguardando && stage.cadPosAguardando.length) {
+    var posItems = stage.cadPosAguardando.map(function(c) {
+      return '<div class="pb-cad-item"><div class="pb-cad-d">' + c.d + '</div><div class="pb-cad-body"><div class="pb-cad-l">' + c.l + '</div><div class="pb-cad-a">' + c.a + '</div></div></div>';
+    }).join('');
+    cadHtml += '<div class="pb-sec"><div class="pb-sh" onclick="pbToggleSec(this)"><span class="pb-shlb">\u23F0 Cadencia Pre-Retorno (' + stage.cadPosAguardando.length + ' toques)</span><span class="pb-shar">\u203A</span></div><div class="pb-sbody"><div class="pb-cad-list">' + posItems + '</div></div></div>';
   }
 
   // Objections — with signal (s) and diagnosis (d)
