@@ -228,57 +228,16 @@
         <div id="debrief-lead-preview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px"></div>
       </div>
       <div class="debrief-q">
-        <label>1. Velocidade do meu pensamento na ligação</label>
-        <select id="db-1" class="form-select">
-          <option value="">Selecione</option>
-          <option value="1 — muito lento, travei">1 — muito lento, travei</option>
-          <option value="2 — lento mas funcional">2 — lento mas funcional</option>
-          <option value="3 — normal, equilibrado">3 — normal, equilibrado</option>
-          <option value="4 — rapido mas controlado">4 — rapido mas controlado</option>
-          <option value="5 — acelerado demais, falei mais que ouvi">5 — acelerado demais, falei mais que ouvi</option>
-        </select>
+        <label>1. Qual foi o melhor momento da ligação?</label>
+        <textarea id="db-5" placeholder="O que funcionou, onde o lead se abriu, frase que conectou..."></textarea>
       </div>
       <div class="debrief-q">
-        <label>2. Fiz alguma promessa que nao devia? (Impulsividade)</label>
-        <select id="db-2" class="form-select">
-          <option value="">Selecione</option>
-          <option value="Nao — me mantive no script">Nao — me mantive no script</option>
-          <option value="Prometi prazo irreal">Prometi prazo irreal</option>
-          <option value="Dei desconto que nao estava no plano">Dei desconto que nao estava no plano</option>
-          <option value="Prometi resultado garantido">Prometi resultado garantido</option>
-          <option value="Fui alem do diagnostico sem permissao">Fui alem do diagnostico sem permissao</option>
-        </select>
+        <label>2. Onde travei ou me desviei?</label>
+        <textarea id="db-6" placeholder="Momento que perdi o fio, TDAH desviou, sai da Linha Reta..."></textarea>
       </div>
       <div class="debrief-q">
-        <label>3. Qual pilar da Trinca estava fraco?</label>
-        <select id="db-3" class="form-select">
-          <option value="">Nenhum — todos solidos</option>
-          <option value="Você">Voce (confianca/tonalidade)</option>
-          <option value="Ferramenta">Ferramenta (consorcio)</option>
-          <option value="Realize">Realize (empresa)</option>
-        </select>
-      </div>
-      <div class="debrief-q">
-        <label>4. Me senti grandioso ou exagerado? (Sinal hipomaniaco)</label>
-        <select id="db-4" class="form-select">
-          <option value="">Selecione</option>
-          <option value="Nao — tom adequado">Nao — tom adequado</option>
-          <option value="Levemente — me peguei e corrigi">Levemente — me peguei e corrigi</option>
-          <option value="Sim — prometi mais do que devia">Sim — prometi mais do que devia</option>
-          <option value="Sim — perdi o fio e fui em espiral">Sim — perdi o fio e fui em espiral</option>
-        </select>
-      </div>
-      <div class="debrief-q">
-        <label>5. Em que momento sai da Linha Reta?</label>
-        <textarea id="db-5" placeholder="Descreva o momento especifico..."></textarea>
-      </div>
-      <div class="debrief-q">
-        <label>6. Onde o TDAH desviou a conversa?</label>
-        <textarea id="db-6" placeholder="Assunto que surgiu, dispersao, fui fundo demais em algo irrelevante..."></textarea>
-      </div>
-      <div class="debrief-q">
-        <label>7. O que farei diferente na proxima ligacao?</label>
-        <textarea id="db-7" placeholder="Uma acao especifica e objetiva..."></textarea>
+        <label>3. Prioridade para a próxima ligação</label>
+        <textarea id="db-7" placeholder="Uma ação específica e objetiva que vou aplicar..."></textarea>
       </div>
       <button class="save-debrief-btn" onclick="saveDebrief()">Salvar debrief</button>
     </div>
@@ -323,10 +282,24 @@
       </div>
     </div>
 
-    <!-- W2 PLAYBOOK COMPLETO (10 etapas × 7 ICPs) -->
+    <!-- BRAND & OFERTA -->
+    <div class="learn-section">
+      <div class="learn-header" onclick="toggleLearn('wbrand')">
+        <div><div class="learn-title">Renda de Tijolo — Brand &amp; Oferta</div><div class="learn-subtitle">Pitch 30s + Promessa + 3 Garantias</div></div>
+        <span style="color:var(--muted);font-size:16px" id="wbrand-icon">&#9654;</span>
+      </div>
+      <div class="learn-body" id="wbrand">
+        <div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Posicionamento</div><div style="font-size:13px;font-weight:700;color:var(--purple2);margin-bottom:2px">Diego Rodrigues — Arquiteto de Renda Imobiliaria</div><div style="font-size:11px;color:var(--text);font-style:italic">Casas que trabalham por voce — sem juros bancarios</div></div>
+        <div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Pitch de 30 segundos</div><div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border-left:3px solid var(--purple);font-size:12px;color:var(--text);line-height:1.7">"Eu ajudo pessoas comuns a conquistar ate 3 casas que geram R$3.200 por mes de renda de aluguel, em ate 7 anos, com parcelas a partir de R$1.100 por mes — sem pagar juros bancarios. Chama <strong>Renda de Tijolo</strong> porque e patrimonio fisico, real, que trabalha por voce todo mes."</div></div>
+        <div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Promessa Especifica</div><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:70px;background:rgba(139,92,246,0.08);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid rgba(139,92,246,0.2)"><div style="font-size:18px;font-weight:800;color:var(--purple2)">3</div><div style="font-size:9px;color:var(--muted)">casas</div></div><div style="flex:1;min-width:70px;background:rgba(16,185,129,0.08);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid rgba(16,185,129,0.2)"><div style="font-size:18px;font-weight:800;color:#10b981">R$3.200</div><div style="font-size:9px;color:var(--muted)">renda/mes</div></div><div style="flex:1;min-width:70px;background:rgba(59,130,246,0.08);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid rgba(59,130,246,0.2)"><div style="font-size:18px;font-weight:800;color:#3b82f6">7 anos</div><div style="font-size:9px;color:var(--muted)">prazo</div></div><div style="flex:1;min-width:70px;background:rgba(245,158,11,0.08);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid rgba(245,158,11,0.2)"><div style="font-size:18px;font-weight:800;color:#f59e0b">R$1.100</div><div style="font-size:9px;color:var(--muted)">parcela/mes</div></div></div></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">3 Garantias</div><div style="display:flex;flex-direction:column;gap:6px"><div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border-left:3px solid #10b981"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">&#128099; Garantia do Primeiro Passo</div><div style="font-size:10px;color:var(--muted2);line-height:1.6">Se no diagnostico voce sentir que nao faz sentido, zero compromisso. Voce so investe seu tempo — e sai com clareza total do cenario patrimonial.</div></div><div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border-left:3px solid #3b82f6"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">&#128269; Garantia de Clareza Total</div><div style="font-size:10px;color:var(--muted2);line-height:1.6">Simulacao personalizada com todos os numeros: credito, parcela, prazo, lance, renda de aluguel. Sem letra miuda, sem surpresa.</div></div><div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border-left:3px solid var(--purple)"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">&#129309; Garantia de Acompanhamento</div><div style="font-size:10px;color:var(--muted2);line-height:1.6">Acompanho sua carta do comeco ao fim: lance, contemplacao, escritura e primeira locacao. Se travar, resolve comigo.</div></div></div></div>
+      </div>
+    </div>
+
+    <!-- W2 PLAYBOOK COMPLETO (9 etapas x 9 ICPs) -->
     <div class="learn-section">
       <div class="learn-header" onclick="toggleLearn('w2')">
-        <div><div class="learn-title">2. Playbook Completo — 10 Etapas × 7 ICPs</div><div class="learn-subtitle">Cadência + Scripts + Objeções por estágio do funil</div></div>
+        <div><div class="learn-title">2. Playbook Completo — 9 Etapas x 9 ICPs</div><div class="learn-subtitle">Cadencia + Scripts + Objecoes por estagio do funil</div></div>
         <span style="color:var(--muted);font-size:16px" id="w2-icon">▶</span>
       </div>
       <div class="learn-body" id="w2">
@@ -955,14 +928,15 @@ function renderStreak() {
   </div>`;
 }
 
-function celebrateMilestone(count) {
+function celebrateMilestone(count, leadNome) {
   const msgs = {1:'1ª ação do dia! Começou!',5:'5 ações hoje! 🚀',10:'10 interações! Máquina!',20:'20 hoje! Modo turbo!',50:'50 ações! Lendário!'};
   if (!msgs[count]) return;
+  const sub = leadNome ? 'Último toque: <strong>' + leadNome + '</strong>' : 'Continue assim!';
   const el = document.createElement('div');
   el.className = 'celebration';
-  el.innerHTML = `<div class="celebration-inner"><span class="celebration-emoji">🎉</span><div class="celebration-text"><strong>${msgs[count]}</strong><small>Continue assim!</small></div></div>`;
+  el.innerHTML = '<div class="celebration-inner"><span class="celebration-emoji">🎉</span><div class="celebration-text"><strong>' + msgs[count] + '</strong><small>' + sub + '</small></div></div>';
   document.body.appendChild(el);
-  setTimeout(()=>{el.classList.add('out'); setTimeout(()=>el.remove(),500);},2500);
+  setTimeout(()=>{el.classList.add('out'); setTimeout(()=>el.remove(),500);},5000);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1657,7 +1631,7 @@ function renderFocusInline() {
     '<div style="font-size:12px;margin-bottom:6px">' + canalIcon + ' ' + canalLabel + '</div>' +
     dorHtml + proxAcaoHtml +
     '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
-      '<button class="ac-btn green" onclick="advanceCadence(\'' + next.id + '\');renderFocusInline()">✓ Feito</button>' +
+      '<button class="ac-btn green" onclick="advanceCadence(\'' + next.id + '\');focoCountdown(60,renderFocusInline)">✓ Feito</button>' +
       '<button class="ac-btn blue" onclick="schedDiag(\'' + next.id + '\');renderFocusInline()">📅 Agendou</button>' +
       '<button class="ac-btn" onclick="openAguardando(\'' + next.id + '\')" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">⏳</button>' +
       (next.whatsapp ? '<a class="ac-btn" href="https://wa.me/55' + next.whatsapp.replace(/\\D/g,'') + '" target="_blank" style="text-decoration:none">💬 WA</a>' : '') +
@@ -1797,7 +1771,7 @@ function renderFocusMode() {
   if (actionDisabled) {
     actionBtnHtml = '<button class="fo-action-btn" style="opacity:0.4;cursor:not-allowed" disabled>📞 Ligação bloqueada (estado baixo)</button>';
   } else {
-    actionBtnHtml = '<button class="fo-action-btn" onclick="focoCardOut(function(){advanceCadence(\'' + next.id + '\');renderFocusMode()})">' + canalIcon + ' ' + (next.proximaAcao ? esc(next.proximaAcao.slice(0,60)) : 'Executar toque — ' + canalLabel) + '</button>';
+    actionBtnHtml = '<button class="fo-action-btn" onclick="focoCardOut(function(){advanceCadence(\'' + next.id + '\');focoCountdown(60,renderFocusMode)})">' + canalIcon + ' ' + (next.proximaAcao ? esc(next.proximaAcao.slice(0,60)) : 'Executar toque — ' + canalLabel) + '</button>';
   }
 
   // Queue
@@ -2513,7 +2487,7 @@ function advanceLead(id, newStatus) {
   logTouch(id, 'WHATSAPP', 'avanco-status', res);
   // Streak e celebração
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
-  celebrateMilestone(todayTouches);
+  celebrateMilestone(todayTouches, leads[idx] ? leads[idx].nome : '');
   refreshView();
 }
 
@@ -2651,7 +2625,7 @@ function advanceCadence(id) {
   }
 
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
-  celebrateMilestone(todayTouches);
+  celebrateMilestone(todayTouches, lead ? lead.nome : '');
   refreshView();
 }
 
@@ -2690,11 +2664,12 @@ function confirmCallResult(atendeu) {
     logTouch(id, _selectedCallCanal, 'toque', 'tentativa');
   }
 
+  var touchedLeadNome = leads[idx] ? leads[idx].nome : '';
   _pendingCallId = null;
   _pendingCallToque = null;
   _pendingCallStageToqueIdx = null;
   const todayTouches = DB.getTouchlog().filter(e=>e.data===today()).length;
-  celebrateMilestone(todayTouches);
+  celebrateMilestone(todayTouches, touchedLeadNome);
   refreshView();
   if (document.getElementById('focus-overlay').classList.contains('open')) renderFocusMode();
 }
@@ -2967,19 +2942,56 @@ function renderPrevisibilidade() {
   formHtml += '<button class="save-metrics-btn" onclick="saveWeekMetrics()">Salvar métricas da semana</button>';
   document.getElementById('week-metrics-form').innerHTML = formHtml;
 
-  // Performance display (preservado)
-  var leads = DB.getLeads();
-  var ganhos = leads.filter(function(l){return l.status==='GANHO';}).length;
-  var pipeline = leads.filter(function(l){return !['GANHO','PERDIDO'].includes(l.status);}).length;
-  var propostas = leads.filter(function(l){return l.status==='PROPOSTA-ENVIADA';}).length;
-  var diags = leads.filter(function(l){return l.status==='AGUARDANDO-DIAGNOSTICO';}).length;
+  // Performance display + KPIs + funil
+  var leads=DB.getLeads();
+  var ganhos=leads.filter(function(l){return l.status==='GANHO';}).length;
+  var pipeline=leads.filter(function(l){return !['GANHO','PERDIDO'].includes(l.status);}).length;
+  var propostas=leads.filter(function(l){return l.status==='PROPOSTA-ENVIADA';}).length;
+  var diags=leads.filter(function(l){return l.status==='AGUARDANDO-DIAGNOSTICO';}).length;
+  var _novos=leads.filter(function(l){return l.status==='NOVO';}).length;
+  var _cad=leads.filter(function(l){return l.status==='CADENCIA-ATIVA';}).length;
+  var _perd=leads.filter(function(l){return l.status==='PERDIDO';}).length;
+  var _gel=leads.filter(function(l){return l.status==='GELADEIRA';}).length;
+  var _nut=leads.filter(function(l){return l.status==='NUTRICAO';}).length;
+  var _tot=leads.length;
+  var _lcd=leads.filter(function(l){return l.dataHoraDiagnostico;}).length;
+  var _ta=_tot>0?Math.round(_lcd/_tot*100):0;
+  var _dr=propostas+ganhos,_da=diags+_dr,_sr=_da>0?Math.round(_dr/_da*100):0;
+  var _cb=propostas+ganhos+_perd,_cr=_cb>0?Math.round(ganhos/_cb*100):0;
+  var _al=leads.filter(function(l){return !['GANHO','PERDIDO','GELADEIRA'].includes(l.status);});
+  var _td=0;_al.forEach(function(l){if(l.dataCriacao)_td+=Math.max(0,Math.abs(daysDiff(l.dataCriacao)||0));});
+  var _tm=_al.length>0?Math.round(_td/_al.length):0;
+  function _kc(v,mn,mx){return v>=mx?'#10b981':v>=mn?'#f97316':'#ef4444';}
+  var _fs=[{l:'Novo',c:_novos,cor:'#3b82f6'},{l:'Cadência',c:_cad,cor:'#a78bfa'},{l:'Diagnóstico',c:diags,cor:'#f97316'},{l:'Proposta',c:propostas,cor:'#ec4899'},{l:'Ganho',c:ganhos,cor:'#10b981'}];
+  var _fm=Math.max.apply(null,_fs.map(function(s){return s.c;}))||1;
+  var _fh='';
+  for(var _i=0;_i<_fs.length;_i++){
+    var _s=_fs[_i],_w=Math.max(8,Math.round(_s.c/_fm*100));
+    _fh+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:10px;color:var(--muted2);min-width:70px;text-align:right">'+_s.l+'</span><div style="flex:1;height:22px;background:var(--bg2);border-radius:4px;overflow:hidden;position:relative"><div style="height:100%;width:'+_w+'%;background:'+_s.cor+';border-radius:4px"></div><span style="position:absolute;right:6px;top:3px;font-size:10px;font-weight:700;color:var(--text)">'+_s.c+'</span></div>';
+    if(_i>0&&_fs[_i-1].c>0)_fh+='<span style="font-size:10px;font-weight:600;color:'+_s.cor+';min-width:36px">'+Math.round(_s.c/_fs[_i-1].c*100)+'%</span>';
+    else _fh+='<span style="min-width:36px"></span>';
+    _fh+='</div>';
+    if(_i<_fs.length-1&&_fs[_i].c>0)_fh+='<div style="text-align:center;font-size:9px;color:var(--muted);margin:-2px 0 2px 78px">↓ '+Math.round(_fs[_i+1].c/_fs[_i].c*100)+'% conv.</div>';
+  }
+  _fh+='<div style="margin-top:8px;display:flex;gap:12px;font-size:10px;color:var(--muted)"><span>❄️ Geladeira: '+_gel+'</span><span>🌱 Nutrição: '+_nut+'</span><span>❌ Perdidos: '+_perd+'</span></div>';
   document.getElementById('performance-display').innerHTML =
     '<div class="metrics-grid">'+
       '<div class="metric-card"><div class="metric-label">No Pipeline</div><div class="metric-value" style="color:var(--purple2)">'+pipeline+'</div><div class="metric-target">leads ativos</div></div>'+
       '<div class="metric-card"><div class="metric-label">Diagnósticos</div><div class="metric-value" style="color:var(--orange)">'+diags+'</div><div class="metric-target">agendados</div></div>'+
       '<div class="metric-card"><div class="metric-label">Propostas</div><div class="metric-value" style="color:var(--pink)">'+propostas+'</div><div class="metric-target">enviadas</div></div>'+
       '<div class="metric-card"><div class="metric-label">Contratos</div><div class="metric-value" style="color:var(--green)">'+ganhos+'</div><div class="metric-target">meta: '+meta+'/mês</div><div class="progress-bar"><div class="progress-fill '+(ganhos>=meta?'ok':ganhos>meta*0.5?'warn':'bad')+'" style="width:'+Math.min(100,ganhos/meta*100)+'%"></div></div></div>'+
-    '</div>';
+    '</div>'+
+    '<div style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:10px">📊 KPIs do Pipeline (calculados do CRM)</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div style="padding:8px;border-radius:8px;background:var(--bg2);text-align:center"><div style="font-size:18px;font-weight:700;color:'+_kc(_ta,20,33)+'">'+_ta+'%</div><div style="font-size:10px;color:var(--muted)">Taxa Agendamento</div><div style="font-size:9px;color:var(--muted2)">'+_lcd+'/'+_tot+' leads</div></div>'+
+        '<div style="padding:8px;border-radius:8px;background:var(--bg2);text-align:center"><div style="font-size:18px;font-weight:700;color:'+_kc(_sr,50,70)+'">'+_sr+'%</div><div style="font-size:10px;color:var(--muted)">Show Rate</div><div style="font-size:9px;color:var(--muted2)">'+_dr+'/'+_da+' diag</div></div>'+
+        '<div style="padding:8px;border-radius:8px;background:var(--bg2);text-align:center"><div style="font-size:18px;font-weight:700;color:'+_kc(_cr,30,50)+'">'+_cr+'%</div><div style="font-size:10px;color:var(--muted)">Close Rate</div><div style="font-size:9px;color:var(--muted2)">'+ganhos+'/'+_cb+' deals</div></div>'+
+        '<div style="padding:8px;border-radius:8px;background:var(--bg2);text-align:center"><div style="font-size:18px;font-weight:700;color:'+_kc(30-_tm,0,15)+'">'+_tm+'d</div><div style="font-size:10px;color:var(--muted)">Tempo Médio Pipeline</div><div style="font-size:9px;color:var(--muted2)">'+_al.length+' leads ativos</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:10px">🔻 Funil de Conversão</div>'+_fh+'</div>';
 }
 
 function saveWeekMetrics() {
@@ -3185,23 +3197,17 @@ function saveState() {
 
 function saveDebrief() {
   const leadId = document.getElementById('db-lead').value;
-  // Validar campos obrigatórios do debrief
+  // Validar campos obrigatórios do debrief (3 perguntas)
   const db5 = document.getElementById('db-5').value.trim();
   const db6 = document.getElementById('db-6').value.trim();
   const db7 = document.getElementById('db-7').value.trim();
   if (!db5 || !db6 || !db7) {
-    showToast('⚠ Preencha os 3 campos obrigatórios: Linha Reta, TDAH desviou e O que farei diferente');
+    showToast('⚠ Preencha os 3 campos: Melhor momento, Onde travei, Prioridade');
     return;
   }
   if (db7.length < 15 || db7 === 'Vou ser melhor' || db7 === 'melhorar') {
-    showToast('⚠ "O que farei diferente" precisa ser uma ação específica (ex: "Vou usar SPIN antes de mencionar ticket")');
+    showToast('⚠ "Prioridade" precisa ser uma ação específica (ex: "Vou usar SPIN antes de mencionar ticket")');
     return;
-  }
-  // Detectar inconsistência grandiosidade vs pilar fraco (Squad Psiquiatria)
-  const grandiosidade = document.getElementById('db-4').value;
-  const pilarFracoCheck = document.getElementById('db-3').value;
-  if (grandiosidade && grandiosidade.includes('Sim') && pilarFracoCheck === '') {
-    if (!confirm('⚠️ Você indicou sinal hipomaniaco mas nenhum pilar fraco.\nEm estado hipomaniaco geralmente um pilar é afetado. Confirmar assim mesmo?')) return;
   }
   const leads = DB.getLeads();
   const lead = leads.find(l => l.id === leadId);
@@ -3215,15 +3221,10 @@ function saveDebrief() {
     humor: stateNow.humor || 7,
     energia: stateNow.energia || 7,
     phase,
-    velocidadePensamento: document.getElementById('db-1').value,
-    promessaIndevida: document.getElementById('db-2').value,
-    pilarFraco: document.getElementById('db-3').value,
-    grandiosidade: document.getElementById('db-4').value,
-    saiuLinhaReta: document.getElementById('db-5').value,
-    tdahDesviou: document.getElementById('db-6').value,
-    proximaAcao: document.getElementById('db-7').value,
+    melhorMomento: db5,
+    ondeTravei: db6,
+    proximaAcao: db7,
   };
-  // Calcular score do debrief
   const score = calcDebriefScore(debrief);
   debrief.score = score;
 
@@ -3232,24 +3233,22 @@ function saveDebrief() {
   if (debriefs.length > 100) debriefs.pop();
   DB.saveDebriefs(debriefs);
 
-  // Atualizar lead com info do debrief
   if (leadId) {
     const idx = leads.findIndex(l => l.id === leadId);
     if (idx >= 0) {
-      if (debrief.pilarFraco) leads[idx].pilarFraco = debrief.pilarFraco;
       leads[idx].ultimoDebrief = today();
       leads[idx].ultimoDebriefScore = score;
       DB.saveLeads(leads);
     }
   }
 
-  ['db-1','db-2','db-3','db-4','db-5','db-6','db-7'].forEach(id => {
+  ['db-5','db-6','db-7'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.tagName === 'TEXTAREA' ? el.value = '' : el.selectedIndex = 0;
+    if (el) el.value = '';
   });
   renderDebriefHistory();
   const scoreEmoji = score >= 8 ? '⭐' : score >= 5 ? '👍' : '⚠️';
-  alert(`Debrief salvo! Score: ${score}/10 ${scoreEmoji}`);
+  alert('Debrief salvo! Score: ' + score + '/10 ' + scoreEmoji);
 }
 
 function populateLeadSelect() {
@@ -3278,17 +3277,32 @@ function updateDebriefPreview() {
 }
 
 function calcDebriefScore(d) {
-  var score = 10;
-  var vel = d.velocidadePensamento || '';
-  if (vel.startsWith('1') || vel.startsWith('5')) score -= 2;
-  else if (vel.startsWith('2') || vel.startsWith('4')) score -= 1;
-  var prom = d.promessaIndevida || '';
-  if (prom && !prom.startsWith('Nao')) score -= 2;
-  if (d.pilarFraco && d.pilarFraco !== '') score -= 1;
-  var grand = d.grandiosidade || '';
-  if (grand.includes('perdi o fio')) score -= 3;
-  else if (grand.includes('prometi mais')) score -= 2;
-  else if (grand.includes('Levemente')) score -= 1;
+  // Compatível com debriefs antigos (7 perguntas) e novos (3 perguntas)
+  if (d.velocidadePensamento || d.promessaIndevida || d.grandiosidade) {
+    // Debrief legado (7 perguntas)
+    var score = 10;
+    var vel = d.velocidadePensamento || '';
+    if (vel.startsWith('1') || vel.startsWith('5')) score -= 2;
+    else if (vel.startsWith('2') || vel.startsWith('4')) score -= 1;
+    var prom = d.promessaIndevida || '';
+    if (prom && !prom.startsWith('Nao')) score -= 2;
+    if (d.pilarFraco && d.pilarFraco !== '') score -= 1;
+    var grand = d.grandiosidade || '';
+    if (grand.includes('perdi o fio')) score -= 3;
+    else if (grand.includes('prometi mais')) score -= 2;
+    else if (grand.includes('Levemente')) score -= 1;
+    return Math.max(1, Math.min(10, score));
+  }
+  // Debrief novo (3 perguntas) — pontua pela profundidade das respostas
+  var score = 5;
+  var melhor = (d.melhorMomento || d.saiuLinhaReta || '').length;
+  var travei = (d.ondeTravei || d.tdahDesviou || '').length;
+  var prox = (d.proximaAcao || '').length;
+  if (melhor > 30) score += 1;
+  if (melhor > 80) score += 1;
+  if (travei > 30) score += 1;
+  if (prox > 20) score += 1;
+  if (prox > 50) score += 1;
   return Math.max(1, Math.min(10, score));
 }
 

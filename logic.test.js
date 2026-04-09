@@ -220,9 +220,15 @@ describe('canAdvanceStatus()', () => {
     expect(r.error).toContain('Fluxo bloqueado');
   });
 
-  test('CADENCIA → DIAGNOSTICO: permitido', () => {
-    const r = canAdvanceStatus({ status: 'CADENCIA-ATIVA' }, 'AGUARDANDO-DIAGNOSTICO');
+  test('CADENCIA → DIAGNOSTICO: permitido com CHAMP >= 4', () => {
+    const r = canAdvanceStatus({ status: 'CADENCIA-ATIVA', champC:2, champH:1, champA:1, champM:0 }, 'AGUARDANDO-DIAGNOSTICO');
     expect(r.ok).toBe(true);
+  });
+
+  test('CADENCIA → DIAGNOSTICO: bloqueado com CHAMP < 4', () => {
+    const r = canAdvanceStatus({ status: 'CADENCIA-ATIVA', champC:1, champH:1, champA:0, champM:0 }, 'AGUARDANDO-DIAGNOSTICO');
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('CHAMP');
   });
 
   test('PROPOSTA → GANHO: precisa de dor + proximaAcao', () => {
@@ -264,7 +270,7 @@ describe('canAdvanceStatus()', () => {
       for (const to of tos) {
         // Skip cases that need extra fields
         if (to === 'PROPOSTA-ENVIADA' || to === 'GANHO') continue;
-        const r = canAdvanceStatus({ status: from }, to);
+        const r = canAdvanceStatus({ status: from, champC:3, champH:3, champA:3, champM:3 }, to);
         expect(r.ok).toBe(true);
       }
     }
