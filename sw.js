@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════
 // TRINCA DA CERTEZA 4.0 — Service Worker (PWA)
-// Cache-first para assets, network-first para API
+// Network-first: sempre busca versão nova, cache como fallback offline
 // ═══════════════════════════════════════════════════
 
-const CACHE_NAME = 'trinca-v5.0';
+const CACHE_NAME = 'trinca-v6.0';
 const ASSETS = [
   './',
   './index.html',
@@ -18,7 +18,7 @@ const ASSETS = [
   './icon-512.svg',
 ];
 
-// Install: cache assets
+// Install: cache assets + força ativação imediata
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -27,7 +27,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate: limpa caches antigos
+// Activate: limpa TODOS os caches antigos + toma controle imediato
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -36,7 +36,7 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first para assets, network-first para API
+// Fetch: NETWORK-FIRST para tudo local, cache só como fallback offline
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
@@ -46,15 +46,16 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Assets locais — cache first, fallback para rede
+  // Assets locais — NETWORK FIRST, cache como fallback offline
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fetched = fetch(e.request).then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        return response;
-      }).catch(() => cached);
-      return cached || fetched;
+    fetch(e.request).then(response => {
+      // Atualiza o cache com a versão nova
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      return response;
+    }).catch(() => {
+      // Sem internet: usa cache
+      return caches.match(e.request);
     })
   );
 });

@@ -4540,12 +4540,32 @@ init();
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-sync.js"></script>
 <script>
-// PWA — Registro do Service Worker
+// PWA — Registro do Service Worker + auto-update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(r => console.log('[SW] Registrado:', r.scope))
+      .then(reg => {
+        console.log('[SW] Registrado:', reg.scope);
+        // Verifica atualizações a cada 5 minutos
+        setInterval(() => reg.update(), 5 * 60 * 1000);
+        // Quando nova versão disponível, ativa imediatamente
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          if (newSW) {
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'activated') {
+                console.log('[SW] Nova versão ativada — recarregando...');
+                window.location.reload();
+              }
+            });
+          }
+        });
+      })
       .catch(e => console.warn('[SW] Falha:', e));
+  });
+  // Quando o SW assume controle, recarrega pra pegar código novo
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
   });
 }
 </script>
