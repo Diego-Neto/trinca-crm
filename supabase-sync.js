@@ -29,8 +29,6 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'implicit',
-    // Desabilitar lock interno do GoTrue (se disponível na versão do CDN)
-    lock: 'no-lock',
   }
 });
 let _currentUser  = null;

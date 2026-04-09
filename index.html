@@ -4820,6 +4820,20 @@ window._initTimeout = setTimeout(() => {
   </div>
 </div>
 
+<!-- LOCK FIX: DEVE rodar ANTES do Supabase CDN carregar -->
+<script>
+// Substituir navigator.locks ANTES do Supabase carregar
+// Isso impede o GoTrueClient de usar o lock nativo que trava
+if (typeof navigator !== 'undefined') {
+  navigator.locks = {
+    request: function(_name, _opts, cb) {
+      if (typeof _opts === 'function') { cb = _opts; }
+      return Promise.resolve(cb({ name: _name }));
+    }
+  };
+  console.log('[Trinca] navigator.locks substituído com sucesso');
+}
+</script>
 <!-- Supabase — carrega por último para não bloquear UI -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-sync.js"></script>
