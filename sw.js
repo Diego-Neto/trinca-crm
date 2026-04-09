@@ -3,7 +3,7 @@
 // Network-first: sempre busca versão nova, cache como fallback offline
 // ═══════════════════════════════════════════════════
 
-const CACHE_NAME = 'trinca-v12.0';
+const CACHE_NAME = 'trinca-v13.0';
 const ASSETS = [
   './',
   './index.html',
