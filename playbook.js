@@ -43,7 +43,17 @@ var PB_ICPS = {
     dor:'22-32 anos. Quer comecar a construir patrimonio agora. Nao tem entrada grande. Sente que e "cedo demais" — mas e exatamente o momento certo.',
     gatilho:'comecar patrimonio sem entrada',
     onde:'Instagram, grupos de empreendedorismo jovem, faculdades',
-    tip:'Sonho > produto. Conecte ao imovel dos sonhos, nao a parcela.'}
+    tip:'Sonho > produto. Conecte ao imovel dos sonhos, nao a parcela.'},
+  divorciado:{nome:'Divorciado(a)',icon:'\uD83D\uDC94',
+    dor:'Precisa dividir patrimonio e recomecar do zero. Sente que perdeu tudo. Quer reconstruir com seguranca sem repetir erros financeiros.',
+    gatilho:'reconstruir patrimonio pos-divorcio',
+    onde:'Advogados de familia, grupos de apoio, indicacao direta',
+    tip:'Empatia primeiro. Nunca julgue a situacao anterior. Foco: recomecar com inteligencia, nao com pressa.'},
+  aposentado:{nome:'Aposentado(a)',icon:'\uD83C\uDF3F',
+    dor:'Renda fixa caindo com inflacao. Previdencia nao acompanha custo de vida. Quer complementar com aluguel sem arriscar o que tem.',
+    gatilho:'complementar renda com aluguel',
+    onde:'Grupos de aposentados, associacoes, indicacao de filhos/netos',
+    tip:'Seguranca e a palavra-chave. Mostre previsibilidade, nao rentabilidade agressiva. Respeite o ritmo.'}
 };
 
 var PB_STAGES = [
@@ -51,13 +61,15 @@ var PB_STAGES = [
    desc:'Nunca respondeu. Ligacao primeiro — WPP e fallback. You are a sifter, not an alchemist. 3 tentativas de ligacao antes de mudar canal.',
    steps:['Liga de manha — ligacao primeiro (Aaron Ross).','Se nao atendeu: WPP em 15min — curiosity gap, nao pitch.','Objetivo unico: gerar resposta ou agendar diagnostico.','Nunca dois contatos no mesmo canal no mesmo dia.'],
    scripts:{
-    empresario:'"Sabe quanto um empresario perde por ano pagando juros de banco pra girar o caixa? Em media R$48 mil. Pessoas como voce ja resolveram isso — eu sou o Diego, da Realize, e em 2 minutos te mostro como."',
-    liberal:'"Se voce parar de atender 3 meses, qual e sua protecao patrimonial fora do consultorio? A maioria dos profissionais liberais que atendo nao tinha — ate resolver. Eu sou o Diego, da Realize. 15 minutos essa semana?"',
-    investidor:'"Sua carteira tem papel, tem renda fixa — mas quanto do seu patrimonio sobrevive a uma crise imobiliaria? Investidores como voce ja adicionaram essa camada. Eu sou o Diego, da Realize. 2 minutos?"',
-    servidor:'"Voce tem a renda mais estavel do pais — mas em 10 anos, qual e o patrimonio que sobra? Servidores como voce ja transformaram estabilidade em tijolo. Eu sou o Diego, da Realize. Dois minutinhos?"',
-    assalariado:'"Quanto voce pagou de aluguel nos ultimos 12 meses? Esse dinheiro sumiu. Pessoas na sua situacao ja redirecionaram isso pra patrimonio proprio. Eu sou o Diego, da Realize. 2 minutos pra te mostrar como?"',
-    herdeiro:'"Um montante parado perde pra inflacao todo mes — e a pior decisao e nao decidir. Pessoas como voce ja transformaram isso em renda de aluguel segura. Eu sou o Diego, da Realize. 15 minutos?"',
-    jovem:'"Com 25 anos, cada mes que passa sem construir patrimonio custa caro la na frente. Jovens como voce ja comecaram — sem entrada grande. Eu sou o Diego, da Realize. 2 minutos?"'
+    empresario:'"Empresarios do seu porte perdem em media R$48 mil por ano so em juros bancarios pra girar caixa. Pessoas como voce ja eliminaram esse custo e transformaram em patrimonio. Posso te mostrar como em 2 minutos?"',
+    liberal:'"Se voce parar de atender por 3 meses, qual patrimonio te protege fora do consultorio? A maioria dos profissionais liberais que ajudei nao tinha essa resposta — ate montar a estrategia certa. 15 minutos essa semana?"',
+    investidor:'"Sua carteira tem papel, renda fixa, acoes — mas quanto do seu patrimonio sobrevive a uma crise real sem ativo fisico? Investidores como voce ja adicionaram essa camada sem resgatar nada. 2 minutos pra te mostrar o calculo?"',
+    servidor:'"Renda estavel todo mes — mas em 10 anos, qual patrimonio sobra? A maioria dos servidores que ajudei estava na mesma situacao antes de transformar estabilidade em tijolo. 2 minutos pra te mostrar como?"',
+    assalariado:'"Quanto voce pagou de aluguel nos ultimos 12 meses? Soma e veja: esse dinheiro sumiu. Pessoas na sua situacao ja redirecionaram isso pra patrimonio proprio — sem precisar de entrada. 2 minutos?"',
+    herdeiro:'"Dinheiro parado perde pra inflacao todo mes — e a pior decisao e nao decidir. Pessoas na sua situacao ja transformaram esse montante em renda de aluguel segura e previsivel. 15 minutos pra te mostrar a estrutura?"',
+    jovem:'"Cada mes sem construir patrimonio entre os 22 e 32 custa caro la na frente — e a maioria so descobre tarde demais. Jovens como voce ja comecaram sem entrada grande. 2 minutos pra ver como funciona?"',
+    divorciado:'"Depois de um divorcio, recomecar financeiramente parece impossivel — mas nao precisa ser. Pessoas na sua situacao ja reconstruiram patrimonio do zero, sem banco e sem juros. 2 minutos pra te mostrar como?"',
+    aposentado:'"A aposentadoria perde valor todo mes com a inflacao — e esperar so piora. Pessoas como voce ja complementaram a renda com aluguel de imovel, sem arriscar o que ja tem. 2 minutos?"'
    },
    cad:[
     {d:'D1 \u2600',l:'Ligacao manha — CURIOSIDADE',a:'Canal primario. Curiosity gap puro. CHAMP nos primeiros 90s se atendeu. Objetivo: gerar interesse. Taxa: 1:7 ICP / 1:10 geral.'},
@@ -91,15 +103,17 @@ var PB_STAGES = [
     servidor:'"Que bom! Voce esta pensando em sair do aluguel, ou ja tem imovel e quer o proximo passo no patrimonio?"',
     assalariado:'"Oi! Voce esta pagando aluguel hoje? Quanto voce pagou nos ultimos 12 meses — e onde esta esse dinheiro agora?"',
     herdeiro:'"Otimo que respondeu! O montante que voce tem — esta alocado em alguma coisa agora ou esta em conta parada esperando uma decisao?"',
-    jovem:'"Que bom! Me fala: qual e sua renda mensal hoje e em quanto tempo voce quer ter o primeiro patrimonio fisico?"'
+    jovem:'"Que bom! Me fala: qual e sua renda mensal hoje e em quanto tempo voce quer ter o primeiro patrimonio fisico?"',
+    divorciado:'"Que bom que respondeu! Me conta: voce ja resolveu a parte patrimonial do divorcio ou ainda esta no processo? Pergunto porque muda a estrategia."',
+    aposentado:'"Otimo! Voce esta sentindo a renda da aposentadoria apertar ou quer se antecipar antes de apertar? Isso muda o caminho que faz sentido."'
    },
    cad:[
-    {d:'Resp.',l:'Resposta imediata',a:'Responde ao que ele/ela trouxe + pergunta CHAMP na mesma mensagem. Maximo 5min de delay.'},
-    {d:'+24h',l:'Ancora na dor',a:'Retoma a dor que revelou com angulo novo. "Voce mencionou [X] — isso ainda esta pesando?" Nunca "oi tudo bem".'},
-    {d:'+48h',l:'Alterna canal — Ligacao',a:'Liga. Tom: verificando, nao cobrando. "So confirmando se recebeu — queria entender melhor o que voce falou sobre [dor]."'},
-    {d:'+72h',l:'Prova social',a:'WPP com case real. "Atendi alguem na sua situacao que [resultado]. Quando posso te mostrar como funciona?"'},
-    {d:'+96h',l:'Custo da inacao',a:'"Voce mencionou [dor]. Cada mes que passa sem resolver, [custo concreto]. So quero que voce tenha essa clareza."'},
-    {d:'+120h',l:'CTA final ou Geladeira',a:'"[Nome], ultima mensagem sobre isso. Se fizer sentido, me avisa. Se nao — sem problema nenhum, to aqui quando o momento mudar." Se nao responder > GELADEIRA.'}
+    {d:'Resp.',l:'WPP — Resposta imediata',a:'Responde ao que ele/ela trouxe + pergunta CHAMP na mesma mensagem. Maximo 5min de delay. Canal: WPP.'},
+    {d:'+24h',l:'Ligacao — Ancora na dor',a:'Liga. Retoma a dor que revelou. "Voce mencionou [X] — queria entender melhor." Tom: curioso, nao cobrando. Canal: Ligacao.'},
+    {d:'+48h',l:'WPP — Prova social',a:'WPP com case real. "Atendi alguem na sua situacao que [resultado]. Quando posso te mostrar como funciona?" Canal: WPP.'},
+    {d:'+72h',l:'Instagram — Contexto pessoal',a:'Curte post recente + DM com angulo da dor. "Vi seu post sobre [X] — conecta com o que conversamos. Quando tiver 15min?" Canal: Instagram.'},
+    {d:'+96h',l:'Ligacao — Custo da inacao',a:'Liga com angulo diferente. "Voce mencionou [dor]. Cada mes que passa sem resolver, [custo concreto]. So quero que voce tenha essa clareza." Canal: Ligacao.'},
+    {d:'+120h',l:'WPP — CTA final ou Geladeira',a:'"[Nome], ultima mensagem sobre isso. Se fizer sentido, me avisa. Se nao — sem problema nenhum, to aqui quando o momento mudar." Se nao responder > GELADEIRA. Canal: WPP.'}
    ],
    objs:[
     {q:'"Vou pensar"',s:'Objecao escondida — nao verbalizou o que trava.',d:'"A ideia em si faz sentido pra voce?" Se sim: "O que falta pra ir em frente?" A resposta aponta o Ten (Certeza) fraco.'},
@@ -109,6 +123,34 @@ var PB_STAGES = [
    crm:'DOR: [o que revelou]\nSTATUS: [canal] [data] \u00B7 dor: [X]\nPROXIMO: agendar diagnostico \u00B7 CTA duas opcoes',
    lo:'Manda a pergunta de qualificacao. Uma frase. Sem ligar.',
    hi:'CHAMP completo + fecha diagnostico na mesma conversa.'},
+
+  {id:'aguardando',nome:'Aguardando Retorno',icon:'\u23F3',tag:'AGUARDANDO-RETORNO',
+   desc:'Lead sinalizou mas pediu tempo — precisa falar com alguem, esperar uma data, ou pensar. Voce tem uma data de retorno. Mantem presenca sem pressao ate o dia combinado.',
+   steps:['Registre a data de retorno e o motivo (falar com conjuge, socio, etc).','Mantenha 3 toques antes da data de retorno.','Nunca pressione — presenca > insistencia.','Se nao responder no dia do retorno, volta pra cadencia Sinalizou +96h.'],
+   scripts:{
+    empresario:'"[Nome], fico no aguardo. Enquanto isso, se surgir qualquer duvida sobre o cenario da empresa, me chama aqui."',
+    liberal:'"Dr(a). [Nome], fico no aguardo. Se surgir qualquer duvida sobre a estrategia patrimonial, me chama."',
+    investidor:'"[Nome], fico no aguardo. Se quiser ver algum numero comparativo antes da nossa conversa, me avisa."',
+    servidor:'"[Nome], fico no aguardo. Qualquer duvida que surgir, me chama aqui."',
+    assalariado:'"[Nome], fico no aguardo. Se surgir alguma duvida sobre como funciona, me chama."',
+    herdeiro:'"[Nome], fico no aguardo. Qualquer duvida que surgir na conversa com [pessoa], me chama que esclareco."',
+    jovem:'"[Nome], fico no aguardo. Se bater alguma duvida, me manda aqui que respondo rapido."',
+    divorciado:'"[Nome], fico no aguardo. Se surgir qualquer duvida sobre a reconstrucao patrimonial, me chama."',
+    aposentado:'"[Nome], fico no aguardo. Qualquer duvida que surgir sobre a renda complementar, me chama aqui."'
+   },
+   cad:[
+    {d:'D+1',l:'WPP — Check-in leve',a:'"[Nome], conseguiu conversar com [pessoa]? Fico a disposicao se surgir alguma duvida." Tom leve, sem cobrar.'},
+    {d:'D+3',l:'WPP — Esclarecimento',a:'"[Nome], alguma duvida que posso esclarecer? As vezes uma informacao a mais ajuda na decisao." Oferece valor, nao pressiona.'},
+    {d:'D+retorno',l:'Ligacao — Retomada',a:'"[Nome], chegou o dia que voce mencionou. Vamos marcar pra conversar [os tres / com calma]? Tenho [hora] ou [hora] — qual fica melhor?" CTA com duas opcoes.'}
+   ],
+   objs:[
+    {q:'"Ainda nao consegui falar com [pessoa]"',s:'Timing genuino — nao forcou.',d:'"Sem problema. Quando voce acha que consegue? Posso te dar um toque nesse dia pra nao perder o timing."'},
+    {q:'"Mudei de ideia / nao quero mais"',s:'Objecao nova surgiu no intervalo.',d:'"Entendo. O que mudou desde nossa conversa? Pergunto porque talvez eu consiga esclarecer."'},
+    {q:'Nao responde no dia do retorno',s:'Perdeu urgencia ou esqueceu.',d:'Liga no dia do retorno. "So passando pra lembrar — voce mencionou que hoje seria o dia. Tudo certo pra gente conversar?"'}
+   ],
+   crm:'DOR: [dor revelada]\nSTATUS: AGUARDANDO · retorno: [data] · motivo: [falar com X / pensar]\nPROXIMO: check-in D+1 · [canal]',
+   lo:'Manda o check-in D+1. Uma frase leve. Sem ligar.',
+   hi:'Check-in D+1 + prepara material pra facilitar conversa com influenciador.'},
 
   {id:'parou',nome:'Respondeu & Parou',icon:'\u23F8',tag:'RESPONDEU-PARADO',
    desc:'Respondeu antes, revelou algo real, sumiu. Voce tem municao — usa. Ancora na dor que ela/ele revelou. Nunca volta a cadencia fria.',
@@ -120,7 +162,9 @@ var PB_STAGES = [
     servidor:'"[Nome], voce falou em sair do aluguel. Com o INCC subindo, esperar ficou mais caro mes a mes. Quinta ou sexta, 15 minutos?"',
     assalariado:'"[Nome], voce mencionou o aluguel. Em 12 meses voce paga R$ X que some. Tenho uma opcao que redireciona isso pra patrimonio. 15 minutos?"',
     herdeiro:'"[Nome], o montante parado perde pra inflacao todo mes que passa. Tenho uma estrutura que resolve isso com seguranca. Quando posso te mostrar?"',
-    jovem:'"[Nome], voce mencionou que quer comecar logo. Abriu um grupo novo com entrada que cabe no seu orcamento agora. Quinta ou sexta?"'
+    jovem:'"[Nome], voce mencionou que quer comecar logo. Abriu um grupo novo com entrada que cabe no seu orcamento agora. Quinta ou sexta?"',
+    divorciado:'"[Nome], voce mencionou a reconstrucao patrimonial. Com o mercado imobiliario se movendo, cada mes faz diferenca pra quem ta recomecando. 15 minutos essa semana?"',
+    aposentado:'"[Nome], voce falou em complementar a renda. Com a inflacao corroendo a aposentadoria, a janela de agir e agora. Quinta ou sexta, 15 minutos?"'
    },
    cad:[
     {d:'P1',l:'Ancora na dor',a:'[Dor revelada] + contexto novo + CTA duas opcoes. Uma mensagem so.'},
@@ -146,7 +190,9 @@ var PB_STAGES = [
     servidor:'"[Nome], confirmado: [dia], [hora]. Trago a simulacao personalizada pro seu perfil de renda estavel. Ate la!"',
     assalariado:'"[Nome], confirmado. Trago a comparacao: continuar pagando aluguel vs construir patrimonio. Os numeros vao falar por si. Ate [dia]!"',
     herdeiro:'"[Nome], confirmado. Vou mostrar como estruturar o montante de forma segura com projecao de 5 e 10 anos. Qualquer imprevisto me avisa."',
-    jovem:'"[Nome], confirmado! Vou mostrar os numeros de quem comecou na sua idade — os resultados em 10 anos sao impossiveis de ignorar. Ate [dia]!"'
+    jovem:'"[Nome], confirmado! Vou mostrar os numeros de quem comecou na sua idade — os resultados em 10 anos sao impossiveis de ignorar. Ate [dia]!"',
+    divorciado:'"[Nome], confirmado: [dia], [hora]. Vou preparar uma analise especifica pra quem esta reconstruindo patrimonio. Qualquer imprevisto me avisa."',
+    aposentado:'"[Nome], confirmado: [dia], [hora]. Trago a simulacao personalizada pra complementar sua renda com seguranca. Ate la!"'
    },
    cad:[
     {d:'D0 -5min',l:'Confirmacao imediata',a:'"[Dia], [hora]. Se surgir imprevisto, so me avisa aqui. Ate la!" — em ate 5min apos agendar.'},
@@ -172,7 +218,9 @@ var PB_STAGES = [
     servidor:'"Voce tem estabilidade de renda garantida. Em 10 anos, qual e o seu patrimonio se voce seguir exatamente do jeito que esta hoje?"',
     assalariado:'"Quanto voce pagou de aluguel nos ultimos 12 meses? Consegue me dizer agora onde esta esse dinheiro?"',
     herdeiro:'"O montante que voce recebeu — qual seria a pior coisa que poderia acontecer com ele nos proximos 3 anos se ficar parado?"',
-    jovem:'"Daqui a 10 anos voce tem entre 32 e 42 anos. Se continuar do jeito que esta, qual e seu patrimonio nessa data?"'
+    jovem:'"Daqui a 10 anos voce tem entre 32 e 42 anos. Se continuar do jeito que esta, qual e seu patrimonio nessa data?"',
+    divorciado:'"Voce esta recomecando agora. Se daqui a 5 anos nada mudar no seu patrimonio — como voce se sente? Me conta o que voce mais precisa resolver primeiro."',
+    aposentado:'"Sua aposentadoria cobre quanto do seu custo de vida hoje? E daqui a 5 anos com a inflacao — quanto vai faltar por mes?"'
    },
    cad:[
     {d:'0-10min',l:'Situacao',a:'Confirma e aprofunda o CHAMP. Sem pitch ainda.'},
@@ -199,7 +247,9 @@ var PB_STAGES = [
     servidor:'"[Nome], olhou os numeros. O que ficou faltando pra isso fazer sentido completo?"',
     assalariado:'"[Nome], viu a simulacao. O que esta pesando mais: o valor da parcela, o prazo, ou outra coisa?"',
     herdeiro:'"[Nome], viu como o montante trabalha na simulacao. O que ainda te segura?"',
-    jovem:'"[Nome], viu os numeros em 10 anos. O que ainda nao convenceu completamente?"'
+    jovem:'"[Nome], viu os numeros em 10 anos. O que ainda nao convenceu completamente?"',
+    divorciado:'"[Nome], viu a simulacao de reconstrucao patrimonial. O que ficou faltando pra voce se sentir segura/o pra avancar?"',
+    aposentado:'"[Nome], olhou a simulacao de renda complementar. O que ainda te preocupa — a parcela, o prazo ou outra coisa?"'
    },
    cad:[
     {d:'+24h',l:'Check-in de valor',a:'"Conseguiu olhar a simulacao? Fico a disposicao pra qualquer duvida."'},
@@ -226,7 +276,9 @@ var PB_STAGES = [
     servidor:'"Usar sua estabilidade de renda pra construir patrimonio agora — faz sentido pra voce?" Se sim: "O que ainda te segura?"',
     assalariado:'"Parar de pagar aluguel e comecar a construir — faz sentido pra voce?" Se sim: "O que falta pra isso acontecer?"',
     herdeiro:'"Alavancar o montante de forma estruturada e segura — faz sentido?" Se sim: "O que ainda te preocupa?"',
-    jovem:'"Comecar a construir patrimonio agora enquanto o tempo trabalha pra voce — faz sentido?" Se sim: "O que falta pra dar esse passo?"'
+    jovem:'"Comecar a construir patrimonio agora enquanto o tempo trabalha pra voce — faz sentido?" Se sim: "O que falta pra dar esse passo?"',
+    divorciado:'"Reconstruir patrimonio com seguranca e sem juros — faz sentido pra voce?" Se sim: "O que ainda te segura pra avancar?"',
+    aposentado:'"Complementar a aposentadoria com renda de aluguel previsivel — faz sentido?" Se sim: "O que ainda te preocupa pra dar esse passo?"'
    },
    cad:[
     {d:'Loop 1',l:'Isola a objecao',a:'"A ideia faz sentido? Voce gosta?" — separa produto de acao (Ten #1 vs acao).'},
@@ -253,7 +305,9 @@ var PB_STAGES = [
     servidor:'"[Nome], voce transformou estabilidade de renda em patrimonio concreto. Em [prazo], esse investimento vai estar la."',
     assalariado:'"[Nome], voce parou de construir o patrimonio do dono e comecou a construir o seu. Essa e a virada real."',
     herdeiro:'"[Nome], voce alavancou o montante de forma estruturada e segura. Missao cumprida — com inteligencia."',
-    jovem:'"[Nome], voce comecou cedo. Isso e o maior diferencial que existe em patrimonio. Em 10 anos voce vai olhar pra tras e agradecer essa decisao de hoje."'
+    jovem:'"[Nome], voce comecou cedo. Isso e o maior diferencial que existe em patrimonio. Em 10 anos voce vai olhar pra tras e agradecer essa decisao de hoje."',
+    divorciado:'"[Nome], voce decidiu recomecar com inteligencia. Esse e o primeiro passo de uma nova historia patrimonial. Me avisa qualquer duvida — to aqui."',
+    aposentado:'"[Nome], voce garantiu uma renda complementar segura pra sua aposentadoria. Decisao que traz tranquilidade real. Me avisa qualquer duvida."'
    },
    cad:[
     {d:'+2h',l:'Boas-vindas + blindagem',a:'Celebra + nomeia: "E normal uma voz questionar — quando aparecer, me chama antes de qualquer coisa."'},
@@ -279,7 +333,9 @@ var PB_STAGES = [
     servidor:'"[Nome], saiu um dado novo sobre patrimonio de servidores vs setor privado. Interessante pra quem ta planejando. Te mando?"',
     assalariado:'"[Nome], esse conteudo sobre como sair do aluguel sem entrada grande teve muita procura. Lembrei de voce — vale dar uma olhada."',
     herdeiro:'"[Nome], esse material sobre planejamento patrimonial pos-heranca pode ajudar na sua decisao. Sem pressa."',
-    jovem:'"[Nome], esse case de quem comecou com 25 anos e onde esta hoje com 35 e inspirador. Quando quiser conversar, to aqui."'
+    jovem:'"[Nome], esse case de quem comecou com 25 anos e onde esta hoje com 35 e inspirador. Quando quiser conversar, to aqui."',
+    divorciado:'"[Nome], esse material sobre reconstrucao patrimonial pos-divorcio pode te ajudar. Sem pressa — quando for o momento, to aqui."',
+    aposentado:'"[Nome], saiu um dado novo sobre como aposentados estao complementando renda com aluguel. Lembrei de voce — vale dar uma olhada."'
    },
    cad:[
     {d:'D15',l:'Conteudo educativo',a:'Artigo, case ou video relevante pro ICP. Tom: "lembrei de voce". Sem CTA de venda.'},
@@ -311,7 +367,9 @@ var PB_STAGES = [
     servidor:'"[Nome], abriu um grupo novo com parcelas que encaixam exatamente em quem tem renda estavel como a sua. Vale 10 minutos?"',
     assalariado:'"[Nome], o INCC desse mes veio alto. Quem espera mais um ano vai pagar mais pelo mesmo credito. Lembrei de voce."',
     herdeiro:'"[Nome], surgiu uma estrutura de grupo que se encaixa exatamente no montante que voce tem disponivel. Posso te mostrar?"',
-    jovem:'"[Nome], abriu um grupo novo com entrada que cabe no seu orcamento agora. E o timing certo pra voce comecar."'
+    jovem:'"[Nome], abriu um grupo novo com entrada que cabe no seu orcamento agora. E o timing certo pra voce comecar."',
+    divorciado:'"[Nome], surgiu uma condicao especial pra quem esta reconstruindo patrimonio — parcelas que cabem no orcamento de quem ta recomecando. Posso te mostrar?"',
+    aposentado:'"[Nome], abriu um grupo com parcelas que encaixam perfeitamente em quem tem renda fixa. A renda de aluguel cobre a parcela em poucos anos. Vale 10 minutos?"'
    },
    cad:[
     {d:'D30+',l:'Gancho externo #1',a:'Mercado/produto/prova social. Sem mencionar passado. Como se fosse primeiro contato.'},
@@ -333,6 +391,7 @@ function getPlaybookStage(lead) {
   if (s === 'GANHO') return 'fechamento';
   if (s === 'GELADEIRA') return 'geladeira';
   if (s === 'PROPOSTA-ENVIADA') return f === 'NEGOCIACAO' ? 'negociacao' : 'proposta';
+  if (s === 'AGUARDANDO-RETORNO') return 'aguardando';
   if (s === 'AGUARDANDO-DIAGNOSTICO') return 'agendado';
   if (s === 'NUTRICAO') return 'nutricao';
   if (s === 'CADENCIA-ATIVA' || s === 'NOVO') {
