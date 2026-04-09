@@ -7,10 +7,20 @@ const SUPABASE_URL  = 'https://fzocybokxulzchhkupbj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6b2N5Ym9reHVsemNoaGt1cGJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDk1OTEsImV4cCI6MjA5MDUyNTU5MX0.q2se5gYIPIuWK-s5bcPWm9NtWhpzLbl_zC1OzXrmZ7o';
 
 // ─── INIT ────────────────────────────────────────────
-// Desabilitar navigator.locks que causa "lock not released" em mobile/PWA
-// Seguro pois o CRM é single-tab
-if (typeof navigator !== 'undefined' && !navigator.locks) {
-  navigator.locks = { request: (name, cb) => cb({ name }) };
+// CORREÇÃO DEFINITIVA: navigator.locks causa "lock not released" e trava
+// o auth do Supabase em PWA/mobile/crash anterior. Solução: substituir
+// navigator.locks com implementação simples baseada em Promise.
+// Seguro: CRM é single-tab, não precisa de lock cross-tab real.
+if (typeof navigator !== 'undefined') {
+  // SEMPRE substituir — mesmo que exista — para evitar orphaned locks
+  navigator.locks = {
+    request: function(_name, _opts, cb) {
+      // Supabase chama como request(name, callback) ou request(name, opts, callback)
+      if (typeof _opts === 'function') { cb = _opts; }
+      // Executar o callback imediatamente com um lock fictício
+      return Promise.resolve(cb({ name: _name }));
+    }
+  };
 }
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
@@ -18,7 +28,9 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'implicit'
+    flowType: 'implicit',
+    // Desabilitar lock interno do GoTrue (se disponível na versão do CDN)
+    lock: 'no-lock',
   }
 });
 let _currentUser  = null;
@@ -845,8 +857,10 @@ document.addEventListener('keydown', (e) => {
 // BOOTSTRAP — executa ao carregar a página
 // ═══════════════════════════════════════════════════════
 (async function bootstrap() {
+  console.log('[Trinca 4.0] Bootstrap iniciado — navigator.locks substituído:', typeof navigator.locks.request);
   // Escutar mudanças de auth
   SBAuth.onAuthChange(async (event, session) => {
+    console.log('[Trinca 4.0] onAuthStateChange:', event, session?.user?.email || 'sem user');
     // Detectar recovery de senha — mostrar tela para definir nova senha
     if (event === 'PASSWORD_RECOVERY' && session?.user) {
       _currentUser = session.user;
@@ -987,3 +1001,30 @@ window.SBAuth   = SBAuth;
 window.SBLeads  = SBLeads;
 window._getCurrentUser  = () => _currentUser;
 window._getCurrentPerfil = () => _currentPerfil;
+
+// ─── HELPER: Exportar leads do localStorage para console ───
+// Cole no console: exportLeads()
+// Ou: copy(exportLeads()) para copiar para a area de transferencia
+window.exportLeads = function() {
+  return localStorage.getItem('tc_leads') || '[]';
+};
+
+// ─── HELPER: Upload direto do console (sem Node) ───
+// Cole no console: forceUploadAll()
+window.forceUploadAll = async function() {
+  const user = await SBAuth.getUser();
+  if (!user) { console.error('Faca login primeiro!'); return; }
+  const leads = JSON.parse(localStorage.getItem('tc_leads') || '[]');
+  if (!leads.length) { console.log('Nenhum lead no localStorage.'); return; }
+  console.log(`Enviando ${leads.length} leads como user ${user.id}...`);
+  const rows = leads.map(l => SBLeads._toSB(l, user.id));
+  const { data, error } = await _sb.from('leads').upsert(rows, { onConflict: 'id' }).select('id');
+  if (error) { console.error('ERRO:', error.message); return; }
+  console.log(`OK: ${data.length}/${leads.length} leads gravados no Supabase!`);
+  if (data.length < leads.length) {
+    console.warn(`ATENCAO: ${leads.length - data.length} leads bloqueados por RLS.`);
+  }
+  // Verificar
+  const { data: check } = await _sb.from('leads').select('id');
+  console.log(`Total no Supabase agora: ${check ? check.length : '?'} leads`);
+};
