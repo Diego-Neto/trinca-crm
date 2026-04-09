@@ -100,6 +100,7 @@ const SBLeads = {
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
       data_ganho:             lead.dataGanho || null,
       data_perda:             lead.dataPerda || null,
+      updated_at:             new Date().toISOString(),
       _sync_version:          lead._syncVersion || 0,
     };
   },
@@ -146,6 +147,14 @@ const SBLeads = {
     const query = _sb.from('leads').select('*').order('ultima_atualizacao', { ascending: false });
     // Gestor vê todos; RLS já garante isso
     const { data, error } = await query;
+    if (error) throw error;
+    return (data || []).map(r => this._fromSB(r));
+  },
+
+  async loadSince(timestamp) {
+    const { data, error } = await _sb.from('leads').select('*')
+      .gt('updated_at', timestamp)
+      .order('updated_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(r => this._fromSB(r));
   },
@@ -290,7 +299,11 @@ const SBConfig = {
 async function syncFromSupabase(retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const cloudLeads = await SBLeads.loadAll();
+      const LAST_SYNC_KEY = 'tc_last_sync_ts';
+      const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+      const cloudLeads = lastSync
+        ? await SBLeads.loadSince(lastSync)
+        : await SBLeads.loadAll();
       // MERGE INTELIGENTE: lead local mais recente ganha sobre cloud
       const localLeads = JSON.parse(_get('tc_leads') || '[]');
       const localMap = {};
@@ -324,6 +337,7 @@ async function syncFromSupabase(retries = 3) {
         }
       }
       localStorage.setItem('tc_leads', JSON.stringify(merged));
+      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
       console.log(`[Trinca 4.0] ${merged.length} leads sincronizados (${cloudLeads.length} cloud + merge local)`);
 
       // Sync tasks
