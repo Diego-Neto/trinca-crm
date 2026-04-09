@@ -220,6 +220,12 @@ describe('canAdvanceStatus()', () => {
     expect(r.error).toContain('Fluxo bloqueado');
   });
 
+  test('NOVO → GELADEIRA: bloqueado (removido do fluxo)', () => {
+    const r = canAdvanceStatus({ status: 'NOVO' }, 'GELADEIRA');
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('Fluxo bloqueado');
+  });
+
   test('CADENCIA → DIAGNOSTICO: permitido', () => {
     const r = canAdvanceStatus({ status: 'CADENCIA-ATIVA' }, 'AGUARDANDO-DIAGNOSTICO');
     expect(r.ok).toBe(true);
@@ -254,9 +260,24 @@ describe('canAdvanceStatus()', () => {
     expect(r.ok).toBe(false);
   });
 
-  test('PERDIDO → CADENCIA-ATIVA: permitido (reativação)', () => {
+  test('PERDIDO → CADENCIA-ATIVA: bloqueado sem motivo', () => {
     const r = canAdvanceStatus({ status: 'PERDIDO' }, 'CADENCIA-ATIVA');
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('motivo');
+  });
+
+  test('PERDIDO → CADENCIA-ATIVA: permitido com motivo', () => {
+    const r = canAdvanceStatus({ status: 'PERDIDO' }, 'CADENCIA-ATIVA', 'Lead retornou contato');
     expect(r.ok).toBe(true);
+  });
+
+  test('PROPOSTA-ENVIADA com 1 dia sem atualização = prioridade A', () => {
+    const past = new Date();
+    past.setDate(past.getDate() - 1);
+    expect(getPriority({
+      status: 'PROPOSTA-ENVIADA',
+      ultimaAtualizacao: past.toISOString().split('T')[0]
+    })).toBe('A');
   });
 
   test('todas as transições válidas são aceitas', () => {
@@ -264,7 +285,9 @@ describe('canAdvanceStatus()', () => {
       for (const to of tos) {
         // Skip cases that need extra fields
         if (to === 'PROPOSTA-ENVIADA' || to === 'GANHO') continue;
-        const r = canAdvanceStatus({ status: from }, to);
+        // PERDIDO→CADENCIA-ATIVA precisa de motivo
+        const motivo = (from === 'PERDIDO' && to === 'CADENCIA-ATIVA') ? 'reativação' : undefined;
+        const r = canAdvanceStatus({ status: from }, to, motivo);
         expect(r.ok).toBe(true);
       }
     }

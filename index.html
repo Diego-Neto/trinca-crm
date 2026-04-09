@@ -21,7 +21,10 @@
 <body>
 
 <div id="header">
-  <div class="brand">Trinca <span>4.0</span></div>
+  <div style="display:flex;flex-direction:column;gap:0">
+    <div class="brand">Trinca <span>4.0</span></div>
+    <div style="font-size:8px;color:var(--muted);font-weight:600;letter-spacing:0.5px;line-height:1;margin-top:-2px">Renda de Tijolo — Casas que trabalham por voce</div>
+  </div>
   <div class="state-pill" onclick="toggleAlerts()" title="Clique para ver alertas · Use 🎯 para Modo Foco">
     <div class="state-dot" id="state-dot"></div>
     <span id="state-text">Estado: —</span>
@@ -60,6 +63,15 @@
 
   <!-- CADENCIA -->
   <div id="cadencia-view" class="view">
+
+    <!-- HOJE: Barra de progresso gigante fixa -->
+    <div id="mega-progress" class="mega-progress" style="display:none">
+      <div class="mega-progress-info">
+        <span class="mega-progress-label">Progresso da Cadência</span>
+        <span class="mega-progress-count" id="mega-progress-count">0/0</span>
+      </div>
+      <div class="mega-progress-bar"><div class="mega-progress-fill" id="mega-progress-fill"></div></div>
+    </div>
 
     <!-- HOJE: State Check inline -->
     <div id="hoje-state-check" class="hoje-state" style="display:none">
@@ -175,7 +187,7 @@
     <div class="calc-box">
       <div class="calc-title">🤖 Análise IA do Pipeline</div>
       <div style="font-size:12px;color:var(--muted2);margin-bottom:10px">Patrick Bet-David detecta gargalos e entrega 3 ações para os próximos 7 dias</div>
-      <button class="btn-ai-full" onclick="analisarPipeline()">📊 Analisar Pipeline com IA</button>
+      <button class="btn-ai-full" onclick="analisarPipeline(event)">📊 Analisar Pipeline com IA</button>
       <div id="pipeline-ai-result" style="display:none;margin-top:10px"></div>
     </div>
   </div>
@@ -428,7 +440,7 @@
       </div>
       <div class="learn-body" id="w6">
         <textarea class="form-textarea" id="objecao-input" placeholder="Ex: 'Não tenho dinheiro para a parcela', 'Preciso falar com meu marido', 'Consórcio é muito arriscado'..." style="min-height:64px;margin-bottom:8px"></textarea>
-        <button class="btn-ai-full" onclick="gerarAntiObjecao()">🧠 Gerar Anti-Objeção</button>
+        <button class="btn-ai-full" onclick="gerarAntiObjecao(event)">🧠 Gerar Anti-Objeção</button>
         <div id="objecao-ai-result" style="display:none;margin-top:10px"></div>
       </div>
     </div>
@@ -795,10 +807,32 @@ const PHASES = {
 
 // calcNextTouch() e getPriority() vêm de logic.js
 
+function autoMoveD12ToGeladeira() {
+  const leads = DB.getLeads();
+  const moved = [];
+  leads.forEach(function(l) {
+    if (l.status !== 'CADENCIA-ATIVA') return;
+    const diff = daysDiff(l.ultimaAtualizacao);
+    if (diff !== null && diff <= -12) {
+      l.status = 'GELADEIRA';
+      l.ultimaAtualizacao = today();
+      l.motivoGeladeira = 'Auto: 12+ dias sem resposta';
+      l.dataGeladeira = today();
+      moved.push(l.nome);
+    }
+  });
+  if (moved.length > 0) DB.saveLeads(leads);
+  return moved;
+}
+
 function getAlerts() {
+  const autoMoved = autoMoveD12ToGeladeira();
   const leads = DB.getLeads();
   const alerts = [];
   const t = today();
+  if (autoMoved.length > 0) {
+    alerts.push({type:'yellow',title:`❄️ ${autoMoved.length} lead(s) movido(s) pra Geladeira (12+ dias sem resposta)`,desc:autoMoved.join(', ')});
+  }
 
   // Diagnósticos hoje
   const diagHoje = leads.filter(l => l.status === 'AGUARDANDO-DIAGNOSTICO' && l.dataHoraDiagnostico && l.dataHoraDiagnostico.startsWith(t));
@@ -846,6 +880,10 @@ function getAlerts() {
   // Reativações D30/D60/D90
   const reactAlerts = checkReactivations();
   reactAlerts.forEach(r=>alerts.push({type:'yellow',title:`❄️ ${r.lead.nome} — ${r.dia} na geladeira`,desc:`Hora de reativar! ${r.lead.ganchoReativacao||''}`.slice(0,80)}));
+
+  // Lembretes de nutrição D15/D30/D45/D60
+  const nutricaoAlerts = getNutricaoAlerts();
+  alerts.push(...nutricaoAlerts);
 
   // Ordenar por severidade (red > purple > yellow > green)
   const sevOrder = {red: 0, purple: 1, yellow: 2, green: 3};
@@ -923,15 +961,18 @@ function getHiperfocusAlerts() {
 // STREAK DOPAMÍNICO
 // ═══════════════════════════════════════════════════
 function getStreak() {
-  const history = DB.getStateHistory();
-  if (!history.length) return 0;
+  const touchlog = DB.getTouchlog();
+  if (!touchlog.length) return 0;
+  // Conta toques por dia
+  const touchesByDay = {};
+  touchlog.forEach(function(e) { touchesByDay[e.data] = (touchesByDay[e.data] || 0) + 1; });
   let streak = 0;
   const now = new Date();
-  for (let i=0; i<30; i++) {
+  for (let i = 0; i < 30; i++) {
     const d = new Date(now);
-    d.setDate(d.getDate()-i);
+    d.setDate(d.getDate() - i);
     const iso = d.toISOString().split('T')[0];
-    if (history.find(h=>h.date===iso)) streak++; else break;
+    if ((touchesByDay[iso] || 0) >= 3) streak++; else break;
   }
   return streak;
 }
@@ -940,17 +981,19 @@ function renderStreak() {
   const streak = getStreak();
   if (streak < 2) return '';
   const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const history = DB.getStateHistory();
+  const touchlog = DB.getTouchlog();
+  const touchesByDay = {};
+  touchlog.forEach(function(e) { touchesByDay[e.data] = (touchesByDay[e.data] || 0) + 1; });
   const segs = [];
   for (let i=6; i>=0; i--) {
     const d = new Date(); d.setDate(d.getDate()-i);
     const iso = d.toISOString().split('T')[0];
-    const done = !!history.find(h=>h.date===iso);
+    const done = (touchesByDay[iso] || 0) >= 3;
     segs.push(`<div class="streak-seg ${done?'done':'empty'}">${days[d.getDay()].slice(0,1)}</div>`);
   }
   return `<div class="streak-display">
     <span class="streak-fire">🔥</span>
-    <div><span class="streak-num">${streak}</span> <span class="streak-lbl">dias seguidos</span></div>
+    <div><span class="streak-num">${streak}</span> <span class="streak-lbl">dias com 3+ toques</span></div>
     <div class="streak-bar">${segs.join('')}</div>
   </div>`;
 }
@@ -1066,6 +1109,7 @@ function renderReactivations() {
 }
 
 function openReativarLead(leadId) {
+  showMicroLicao('antes-reativar');
   const lead = DB.getLeads().find(l=>l.id===leadId);
   if (!lead) return;
   document.getElementById('modal-reactiv-body').innerHTML = `
@@ -1125,6 +1169,104 @@ function confirmReativacao(leadId) {
   closeModal('modal-reactiv');
   refreshView();
   showToast(`🔄 ${leads[idx].nome} reativado! Cadência reiniciada.`);
+}
+
+// ═══════════════════════════════════════════════════
+// AUTO-MOVE: PROPOSTA→GELADEIRA (7d) e GELADEIRA→PERDIDO (3 tentativas)
+// ═══════════════════════════════════════════════════
+function autoMovePipeline() {
+  var leads = DB.getLeads();
+  var changed = false;
+
+  leads.forEach(function(l) {
+    // T5: PROPOSTA→GELADEIRA após 7 dias sem resposta
+    if (l.status === 'PROPOSTA-ENVIADA' && l.ultimaAtualizacao) {
+      var diff = daysDiff(l.ultimaAtualizacao);
+      if (diff !== null && diff <= -7) {
+        l.status = 'GELADEIRA';
+        l.dataEntradaGeladeira = today();
+        l.motivoGeladeira = 'Auto: proposta sem resposta há 7+ dias';
+        l.ganchoReativacao = l.objecaoPrincipal || 'Retomar contato sobre proposta';
+        l.ultimaAtualizacao = today();
+        l.toqueNoStage = 0;
+        l.dataInicioEtapa = today();
+        changed = true;
+      }
+    }
+    // T6: GELADEIRA→PERDIDO após 3 tentativas de reativação
+    if (l.status === 'GELADEIRA') {
+      var tentativas = (l.tentativasReativacao || []).length;
+      if (tentativas >= 3) {
+        l.status = 'PERDIDO';
+        l.motivoPerdido = 'Auto: 3 tentativas de reativação sem sucesso';
+        l.ultimaAtualizacao = today();
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) DB.saveLeads(leads);
+}
+
+// ═══════════════════════════════════════════════════
+// LEMBRETES NUTRIÇÃO D15/D30/D45/D60
+// ═══════════════════════════════════════════════════
+function getNutricaoAlerts() {
+  var leads = DB.getLeads().filter(function(l) { return l.status === 'NUTRICAO'; });
+  var alerts = [];
+  var marcos = [15, 30, 45, 60];
+  leads.forEach(function(l) {
+    if (!l.ultimaAtualizacao) return;
+    var dias = Math.abs(daysDiff(l.ultimaAtualizacao) || 0);
+    for (var i = marcos.length - 1; i >= 0; i--) {
+      if (dias >= marcos[i]) {
+        alerts.push({
+          type: dias >= 45 ? 'red' : 'yellow',
+          title: '🌱 Nutrição D' + marcos[i] + ': ' + l.nome,
+          desc: 'Há ' + dias + ' dias em nutrição. ' + (l.motivoNutricao ? 'Motivo: ' + l.motivoNutricao + '. ' : '') + 'Hora de enviar conteúdo de valor ou reativar.'
+        });
+        break;
+      }
+    }
+  });
+  return alerts;
+}
+
+// ═══════════════════════════════════════════════════
+// MICRO-LIÇÕES CONTEXTUAIS (5 dicas antes de ações-chave)
+// ═══════════════════════════════════════════════════
+var MICRO_LICOES = {
+  'antes-ligar': {
+    titulo: '📞 Antes de ligar',
+    dica: 'Leia a DOR do lead em voz alta. Defina UM objetivo para esta ligação. Sem objetivo = sem controle.'
+  },
+  'antes-diagnostico': {
+    titulo: '🔬 Antes do diagnóstico',
+    dica: 'Revise o CHAMP score. Prepare 3 perguntas SPIN. Lembre: você é médico — diagnóstica primeiro, receita depois.'
+  },
+  'antes-proposta': {
+    titulo: '📋 Antes de enviar proposta',
+    dica: 'Cheque as 3 Certezas (Você, Ferramenta, Realize). Se alguma < 7/10, reforce ANTES de enviar. Proposta sem certeza vira papel.'
+  },
+  'antes-fechar': {
+    titulo: '🏆 Antes de fechar',
+    dica: 'Trial close: "Numa escala de 1-10, faz sentido avançar?" Se < 7, pergunte "o que falta pra ser 10?". Nunca force.'
+  },
+  'antes-reativar': {
+    titulo: '🔄 Antes de reativar',
+    dica: 'Use gancho EXTERNO (notícia, mudança de taxa, caso de sucesso). NUNCA mencione o passado ou que "sumiu".'
+  }
+};
+
+function showMicroLicao(tipo) {
+  var licao = MICRO_LICOES[tipo];
+  if (!licao) return;
+  // Verifica se já mostrou hoje para este tipo
+  var key = 'tc_ml_shown_' + tipo;
+  var shown = localStorage.getItem(key);
+  if (shown === today()) return;
+  localStorage.setItem(key, today());
+  showToast(licao.titulo + ' — ' + licao.dica, 6000);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1661,7 +1803,7 @@ function renderFocusInline() {
       '<button class="ac-btn blue" onclick="schedDiag(\'' + next.id + '\');renderFocusInline()">📅 Agendou</button>' +
       '<button class="ac-btn" onclick="openAguardando(\'' + next.id + '\')" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">⏳</button>' +
       (next.whatsapp ? '<a class="ac-btn" href="https://wa.me/55' + next.whatsapp.replace(/\\D/g,'') + '" target="_blank" style="text-decoration:none">💬 WA</a>' : '') +
-      '<button class="ac-btn" onclick="gerarMensagem(\'' + next.id + '\')">🤖</button>' +
+      '<button class="ac-btn" onclick="gerarMensagem(\'' + next.id + '\', event)">🤖</button>' +
       '<button class="ac-btn" onclick="openEditLead(\'' + next.id + '\')">✎</button>' +
     '</div>' +
   '</div>' +
@@ -1850,7 +1992,7 @@ function renderFocusMode() {
     '<div class="fo-secondary">' +
       '<button class="fo-sec-btn fo-nao-atendeu" onclick="focoToggleNaoMenu(\'' + next.id + '\')">📵 Não atendeu</button>' +
       '<button class="fo-sec-btn" onclick="openAguardando(\'' + next.id + '\')">⏳ Aguardando</button>' +
-      '<button class="fo-sec-btn" onclick="gerarMensagem(\'' + next.id + '\')">🤖 Msg</button>' +
+      '<button class="fo-sec-btn" onclick="gerarMensagem(\'' + next.id + '\', event)">🤖 Msg</button>' +
       '<button class="fo-sec-btn" onclick="openEditLead(\'' + next.id + '\')">✎ Editar</button>' +
     '</div>' +
     '<div class="fo-nao-menu" id="fo-nao-menu-' + next.id + '" style="display:none">' +
@@ -1938,6 +2080,7 @@ let pipelineFilter = 'all';
 let pipelineSearchTerm = '';
 
 function goto(view) {
+  if (pomoState.timer) { clearInterval(pomoState.timer); pomoState.running = false; }
   currentView = view;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -2223,6 +2366,22 @@ function renderHojeHeader() {
   var todayTouches = touchlog.filter(function(e) { return e.data === t; }).length;
   var totalAB = countA + countB;
 
+  // MEGA) Barra de progresso gigante fixa
+  var megaEl = document.getElementById('mega-progress');
+  var megaFill = document.getElementById('mega-progress-fill');
+  var megaCount = document.getElementById('mega-progress-count');
+  if (megaEl && megaFill && megaCount) {
+    if (totalAB > 0) {
+      megaEl.style.display = 'block';
+      var megaPct = Math.min(100, Math.round((todayTouches / totalAB) * 100));
+      megaFill.style.width = megaPct + '%';
+      megaCount.textContent = todayTouches + '/' + totalAB;
+      megaFill.setAttribute('data-pct', megaPct + '%');
+    } else {
+      megaEl.style.display = 'none';
+    }
+  }
+
   // B) Resumo do dia
   var resumoEl = document.getElementById('hoje-resumo');
   if (resumoEl) {
@@ -2478,8 +2637,8 @@ function buildActionCard(lead) {
     <div class="ac-action">${action}${scriptHtml}${negocScenarios}${proxAcao}</div>
     <div class="ac-btns">${btns[lead.status]||''}
       ${lead.whatsapp ? `<a class="ac-btn" href="https://wa.me/55${lead.whatsapp.replace(/\D/g,'')}" target="_blank" style="text-decoration:none">💬 WA</a>` : ''}
-      <button class="ac-btn ac-btn-ai" onclick="gerarMensagem('${lead.id}')">🤖 Msg IA</button>
-      ${lead.status==='AGUARDANDO-DIAGNOSTICO'||lead.status==='PROPOSTA-ENVIADA'||lead.status==='CADENCIA-ATIVA'?'<button class="ac-btn ac-btn-ai" onclick="prepararSPIN(\''+lead.id+'\')">🔬 SPIN</button>':''}
+      <button class="ac-btn ac-btn-ai" onclick="gerarMensagem('${lead.id}', event)">🤖 Msg IA</button>
+      ${lead.status==='AGUARDANDO-DIAGNOSTICO'||lead.status==='PROPOSTA-ENVIADA'||lead.status==='CADENCIA-ATIVA'?'<button class="ac-btn ac-btn-ai" onclick="prepararSPIN(\''+lead.id+'\', event)">🔬 SPIN</button>':''}
       <button class="ac-btn" onclick="openPlaybook('${lead.id}')">📖 Play</button>
       <button class="ac-btn" onclick="openEditLead('${lead.id}')">✎ Editar</button>
     </div>
@@ -2487,6 +2646,10 @@ function buildActionCard(lead) {
 }
 
 function advanceLead(id, newStatus) {
+  // Micro-lições contextuais
+  if (newStatus === 'AGUARDANDO-DIAGNOSTICO') showMicroLicao('antes-diagnostico');
+  if (newStatus === 'PROPOSTA-ENVIADA') showMicroLicao('antes-proposta');
+  if (newStatus === 'GANHO') showMicroLicao('antes-fechar');
   // Geladeira tem modal próprio
   if (newStatus === 'GELADEIRA') { openMoveGeladeira(id); return; }
   const leads = DB.getLeads();
@@ -2495,6 +2658,12 @@ function advanceLead(id, newStatus) {
   // Veto de fluxo (Pedro Valério)
   const validation = canAdvanceStatus(leads[idx], newStatus);
   if (!validation.ok) { showToast('🔒 '+validation.error); return; }
+  // Exigir resumo de qualificação CADENCIA→DIAGNOSTICO
+  if (newStatus === 'AGUARDANDO-DIAGNOSTICO' && !leads[idx].resumoQualificacao) {
+    showToast('📝 Preencha o Resumo de Qualificação no cadastro do lead antes de agendar diagnóstico.');
+    openEditLead(id);
+    return;
+  }
   // Aviso hipomaniaco em fechamento
   if (newStatus === 'GANHO') {
     const st = DB.getState();
@@ -2567,6 +2736,8 @@ let _pendingCallStageToqueIdx = null;
 let _selectedCallCanal = 'LIGACAO-NORMAL';
 
 function advanceCadence(id) {
+  // Micro-lição antes de ligar
+  showMicroLicao('antes-ligar');
   // Verificar hiperfoco
   const hfTouches = getTodayTouches(id);
   if (hfTouches.length >= 4) {
@@ -3739,9 +3910,9 @@ function buildLeadForm(lead, defaultStatus) {
       <textarea class="form-textarea" id="fl-notas" placeholder="Contexto adicional...">${l.notas||''}</textarea>
     </div>
     <div class="form-row">
-      <button class="btn-ai-full" onclick="gerarPitchPersonalizado('${l.id||'__NEW__'}')">🎯 Pitch Personalizado (IA)</button>
-      ${isEdit ? `<button class="btn-ai-full" onclick="prepararSPIN('${l.id}')">🔬 Preparar SPIN Selling (IA)</button>` : ''}
-      ${isEdit && l.status === 'PROPOSTA-ENVIADA' ? `<button class="btn-ai-full" onclick="diagnosticoTrinca('${l.id}')">💎 Diagnóstico Trinca da Certeza (IA)</button>` : ''}
+      <button class="btn-ai-full" onclick="gerarPitchPersonalizado('${l.id||'__NEW__'}', event)">🎯 Pitch Personalizado (IA)</button>
+      ${isEdit ? `<button class="btn-ai-full" onclick="prepararSPIN('${l.id}', event)">🔬 Preparar SPIN Selling (IA)</button>` : ''}
+      ${isEdit && l.status === 'PROPOSTA-ENVIADA' ? `<button class="btn-ai-full" onclick="diagnosticoTrinca('${l.id}', event)">💎 Diagnóstico Trinca da Certeza (IA)</button>` : ''}
     </div>
     <div class="form-actions">
       ${isEdit ? `<button class="btn-danger" onclick="deleteLead('${l.id}')">Excluir</button>` : ''}
@@ -3795,6 +3966,11 @@ function saveLead(existingId) {
     pilarFraco: document.getElementById('fl-pilar').value,
     notas: document.getElementById('fl-notas').value,
     motivoPerdido,
+    champC: parseInt(document.getElementById('fl-champC')?.value)||0,
+    champH: parseInt(document.getElementById('fl-champH')?.value)||0,
+    champA: parseInt(document.getElementById('fl-champA')?.value)||0,
+    champM: parseInt(document.getElementById('fl-champM')?.value)||0,
+    resumoQualificacao: document.getElementById('fl-resumoqual')?.value?.trim() || '',
     ultimaAtualizacao: today(),
   };
 
@@ -3857,6 +4033,7 @@ function closeModal(id) {
 }
 
 function refreshView() {
+  autoMovePipeline();
   updateBadges();
   if (currentView === 'pipeline') renderPipeline();
   if (currentView === 'cadencia') renderCadencia();
@@ -4408,6 +4585,7 @@ async function init() {
   applyTheme();
   applyPomoDurUI();
   calcAnalytics();
+  autoMovePipeline();
   updateTaskBadge();
   goto('cadencia'); // Começa na cadência — mais útil no dia a dia
   updateBadges();

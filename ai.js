@@ -119,7 +119,7 @@ function setAILoading(btn, loading) {
 }
 
 // Injection #1 — Gerar Mensagem (Cadência)
-async function gerarMensagem(leadId) {
+async function gerarMensagem(leadId, event) {
   if (!getAIKey()) { configAI(); return; }
   const lead = DB.getLeads().find(l=>l.id===leadId);
   if (!lead) return;
@@ -179,7 +179,7 @@ Gere a mensagem.`;
 }
 
 // Injection #2 — Diagnóstico Trinca da Certeza
-async function diagnosticoTrinca(leadId) {
+async function diagnosticoTrinca(leadId, event) {
   if (!getAIKey()) { configAI(); return; }
   const lead = DB.getLeads().find(l=>l.id===leadId);
   if (!lead) return;
@@ -203,7 +203,7 @@ Diagnóstico das 3 certezas + script cirúrgico de follow-up para fechar.`;
 }
 
 // Injection #3 — Analisar Pipeline
-async function analisarPipeline() {
+async function analisarPipeline(event) {
   if (!getAIKey()) { configAI(); return; }
   const btn = event.currentTarget||event.target;
   setAILoading(btn, true);
@@ -233,7 +233,7 @@ Analise os gargalos e entregue 3 ações para bater a meta.`;
 }
 
 // Injection #4 — Anti-Objeção
-async function gerarAntiObjecao() {
+async function gerarAntiObjecao(event) {
   if (!getAIKey()) { configAI(); return; }
   const objecao = document.getElementById('objecao-input')?.value?.trim();
   if (!objecao) { alert('Cole a objeção do lead no campo acima'); return; }
@@ -257,7 +257,7 @@ Contexto: consórcio Realize, sem juros, crédito R$80k-300k.`;
 }
 
 // Injection #5 — Pitch Personalizado
-async function gerarPitchPersonalizado(leadId) {
+async function gerarPitchPersonalizado(leadId, event) {
   if (!getAIKey()) { configAI(); return; }
   const btn = event.currentTarget||event.target;
   setAILoading(btn, true);
@@ -292,7 +292,7 @@ Gere o pitch personalizado.`;
 }
 
 // Injection #6 — Preparar SPIN Selling (Neil Rackham)
-async function prepararSPIN(leadId) {
+async function prepararSPIN(leadId, event) {
   if (!getAIKey()) { configAI(); return; }
   var lead = DB.getLeads().find(function(l){return l.id===leadId;});
   if (!lead) return;

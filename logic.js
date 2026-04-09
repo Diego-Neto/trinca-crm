@@ -63,7 +63,7 @@ function getPriority(lead) {
   }
   if (lead.status === 'PROPOSTA-ENVIADA') {
     const diff = daysDiff(lead.ultimaAtualizacao);
-    if (diff !== null && diff <= -2) return 'A';
+    if (diff !== null && diff <= -1) return 'A';
     return 'B';
   }
   if (lead.status === 'CADENCIA-ATIVA' || lead.status === 'NOVO') {
@@ -83,7 +83,7 @@ function getPriority(lead) {
 }
 
 var STATUS_FLOW_ALLOWED = {
-  'NOVO':['CADENCIA-ATIVA','NUTRICAO','PERDIDO','GELADEIRA'],
+  'NOVO':['CADENCIA-ATIVA','NUTRICAO','PERDIDO'],
   'CADENCIA-ATIVA':['AGUARDANDO-DIAGNOSTICO','NUTRICAO','PERDIDO','GELADEIRA'],
   'AGUARDANDO-DIAGNOSTICO':['PROPOSTA-ENVIADA','CADENCIA-ATIVA','PERDIDO','NUTRICAO'],
   'PROPOSTA-ENVIADA':['GANHO','CADENCIA-ATIVA','PERDIDO','NUTRICAO','GELADEIRA'],
@@ -98,7 +98,7 @@ var STATUS_LABELS = {
   'NUTRICAO':'Nutrição','GANHO':'Ganho','PERDIDO':'Perdido','GELADEIRA':'Geladeira'
 };
 
-function canAdvanceStatus(lead, newStatus) {
+function canAdvanceStatus(lead, newStatus, motivo) {
   const allowed = STATUS_FLOW_ALLOWED[lead.status] || [];
   if (!allowed.includes(newStatus)) {
     const nextOk = allowed.map(s=>STATUS_LABELS[s]||s).join(', ') || '—';
@@ -109,6 +109,9 @@ function canAdvanceStatus(lead, newStatus) {
   }
   if (newStatus === 'GANHO' && (!lead.dor || !lead.proximaAcao)) {
     return {ok:false, error:'Para marcar como Ganho, preencha: DOR do lead + Próxima ação no cadastro.'};
+  }
+  if (lead.status === 'PERDIDO' && newStatus === 'CADENCIA-ATIVA' && !motivo) {
+    return {ok:false, error:'Informe o motivo da reativação para mover de Perdido → Cadência Ativa.'};
   }
   return {ok:true};
 }
