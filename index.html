@@ -2301,7 +2301,16 @@ function renderPipeline() {
   const leads = DB.getLeads();
   let html = '<div class="kanban-scroll">';
   STATUSES.forEach(status => {
-    const cols = leads.filter(l => l.status === status);
+    let cols = leads.filter(l => l.status === status);
+    // Sprint 1C: Filtrar leads finalizados por período selecionado
+    const FINALIZED = ['GANHO','PERDIDO','GELADEIRA'];
+    if (FINALIZED.includes(status)) {
+      const range = getPeriodRange();
+      cols = cols.filter(l => {
+        const dt = l.dataGanho || l.dataPerda || l.ultimaAtualizacao || l.dataCriacao;
+        return dt >= range.inicio && dt <= range.fim;
+      });
+    }
     // Aplicar filtro ativo
     let filtered = cols;
     if (pipelineFilter === 'prioA') filtered = cols.filter(l => getPriority(l) === 'A');
@@ -2346,7 +2355,11 @@ function renderPipeline() {
       const proxSnippet = lead.proximaAcao ? lead.proximaAcao.slice(0,50) + (lead.proximaAcao.length>50?'…':'') : null;
       const fluxoBadge = lead.fluxo && lead.fluxo !== 'FRIO' ? `<span class="fluxo-badge ${lead.fluxo.toLowerCase()}">${lead.fluxo==='SINALIZOU'?'Sinalizou':'Negoc.'}</span>` : '';
       const parcelaStr = lead.parcelaMensal ? ` · ${lead.parcelaMensal.toLocaleString('pt-BR')}/mês` : '';
-      html += `<div class="lead-card prio-${prio.toLowerCase()}" onclick="openEditLead('${lead.id}')">
+      // Sprint 1C: Deal aging — borda colorida por tempo no status
+      const agingDate = lead.ultimaAtualizacao || lead.dataCriacao;
+      const agingDays = agingDate ? Math.abs(daysDiff(agingDate)) : 0;
+      const agingStyle = agingDays > 7 ? 'border-left:3px solid #ef4444' : agingDays >= 3 ? 'border-left:3px solid #f59e0b' : '';
+      html += `<div class="lead-card prio-${prio.toLowerCase()}" style="${agingStyle}" onclick="openEditLead('${lead.id}')">
         <div class="lc-name">${esc(lead.nome)}${fluxoBadge}</div>
         ${tagsTop ? `<div class="lc-meta" style="margin:4px 0 2px">${tagsTop}</div>` : ''}
         ${dorSnippet ? `<div class="lc-dor">"${esc(dorSnippet)}"</div>` : ''}
