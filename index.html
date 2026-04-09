@@ -1011,7 +1011,7 @@ function celebrateMilestone(count, leadNome) {
 // ═══════════════════════════════════════════════════
 function openMoveGeladeira(leadId) {
   const lead = DB.getLeads().find(l=>l.id===leadId);
-  if (!lead) return;
+  if (!lead) { showToast('⚠ Lead não encontrado'); return; }
   const d30 = new Date(); d30.setDate(d30.getDate()+30);
   const d30str = d30.toISOString().split('T')[0];
   document.getElementById('modal-geladeira-body').innerHTML = `
@@ -1053,7 +1053,7 @@ function confirmGeladeira(leadId) {
   if (!gancho || gancho.trim().length < 10) { showToast('⚠ Descreva o gancho de reativação (min. 10 caracteres)'); return; }
   const leads = DB.getLeads();
   const idx = leads.findIndex(l=>l.id===leadId);
-  if (idx<0) return;
+  if (idx<0) { showToast('⚠ Item não encontrado'); return; }
   leads[idx].status = 'GELADEIRA';
   leads[idx].ultimaAtualizacao = today();
   leads[idx].dataEntradaGeladeira = today();
@@ -1109,7 +1109,7 @@ function renderReactivations() {
 function openReativarLead(leadId) {
   showMicroLicao('antes-reativar');
   const lead = DB.getLeads().find(l=>l.id===leadId);
-  if (!lead) return;
+  if (!lead) { showToast('⚠ Lead não encontrado'); return; }
   document.getElementById('modal-reactiv-body').innerHTML = `
     <div style="font-size:12px;color:var(--muted2);margin-bottom:12px">
       Gancho original: <em>"${lead.ganchoReativacao||'—'}"</em>
@@ -1142,7 +1142,7 @@ function confirmReativacao(leadId) {
   }
   const leads = DB.getLeads();
   const idx = leads.findIndex(l=>l.id===leadId);
-  if (idx<0) return;
+  if (idx<0) { showToast('⚠ Item não encontrado'); return; }
   // D30 mínimo na geladeira (Pedro Valério — processo impede bypass)
   const entrada = leads[idx].dataEntradaGeladeira;
   if (entrada) {
@@ -1315,7 +1315,7 @@ function importJSON() {
 
 async function clearAllData() {
   if (confirm('Apagar TODOS os dados locais? Isso não apaga os dados no servidor.')) {
-    if (typeof SBAuth !== 'undefined') await SBAuth.logout().catch(()=>{});
+    if (typeof SBAuth !== 'undefined') await SBAuth.logout().catch(()=>{ showToast('⚠ Erro ao sair — tente novamente'); });
     Object.keys(localStorage).filter(k => k.startsWith('tc_')).forEach(k => localStorage.removeItem(k));
     location.reload();
   }
@@ -1675,7 +1675,7 @@ function copiarRelatorio() {
   var text = modal ? modal.getAttribute('data-text') : '';
   navigator.clipboard.writeText(text).then(function() {
     showToast('📋 Relatório copiado!');
-  });
+  }).catch(function() { showToast('⚠ Não foi possível copiar'); });
 }
 
 function imprimirRelatorio() {
@@ -2027,7 +2027,7 @@ function focopiarScript(btn) {
     navigator.clipboard.writeText(text).then(function() {
       btn.textContent = '✅';
       setTimeout(function() { btn.textContent = '📋'; }, 1500);
-    });
+    }).catch(function() { showToast('⚠ Não foi possível copiar'); });
   }
 }
 
@@ -2069,7 +2069,7 @@ function focoCountdownSkip() {
 function focoNaoAtendeu(id) {
   var leads = DB.getLeads();
   var idx = leads.findIndex(function(l) { return l.id === id; });
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
   // S5: Playbook-aware canal
   var canal = 'WHATSAPP';
   var _fnLead = leads[idx];
@@ -2104,6 +2104,7 @@ let pipelineSearchTerm = '';
 
 function goto(view) {
   if (pomoState.timer) { clearInterval(pomoState.timer); pomoState.running = false; }
+  if (typeof _focoCountdownTimer !== 'undefined' && _focoCountdownTimer) { clearInterval(_focoCountdownTimer); _focoCountdownTimer = null; }
   currentView = view;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -2714,7 +2715,7 @@ function advanceLead(id, newStatus) {
   if (newStatus === 'GELADEIRA') { openMoveGeladeira(id); return; }
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
   // Veto de fluxo (Pedro Valério)
   const validation = canAdvanceStatus(leads[idx], newStatus);
   if (!validation.ok) { showToast('🔒 '+validation.error); return; }
@@ -2762,10 +2763,10 @@ function openAguardando(id) {
 
 function confirmAguardando() {
   const id = _aguardandoLeadId;
-  if (!id) return;
+  if (!id) { showToast('⚠ Nenhum lead selecionado'); return; }
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
 
   const sel = document.getElementById('aguard-objecao').value;
   const objecao = sel === 'outro' ? document.getElementById('aguard-objecao-custom').value.trim() : sel;
@@ -2805,7 +2806,7 @@ function advanceCadence(id) {
   }
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
   const lead = leads[idx];
 
   // S3: Per-stage cadence engine
@@ -2901,7 +2902,7 @@ function confirmCallResult(atendeu) {
 
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
 
   if (atendeu) {
     leads[idx].diaToqueAtual = newToque; // backward compat
@@ -2936,7 +2937,7 @@ function schedDiag(id) {
   if (!dt) return;
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
   leads[idx].dataHoraDiagnostico = dt;
   leads[idx].status = 'AGUARDANDO-DIAGNOSTICO';
   leads[idx].ultimaAtualizacao = today();
@@ -2953,7 +2954,7 @@ function schedDiag(id) {
 function noShow(id) {
   const leads = DB.getLeads();
   const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
+  if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
   leads[idx].status = 'CADENCIA-ATIVA';
   leads[idx].dataHoraDiagnostico = null;
   leads[idx].ultimaAtualizacao = today();
@@ -4076,7 +4077,7 @@ function saveLead(existingId) {
 
   if (existingId) {
     const idx = leads.findIndex(l => l.id === existingId);
-    if (idx < 0) return;
+    if (idx < 0) { showToast('⚠ Item não encontrado'); return; }
     // Pedro Valério: validar transição de status ao editar
     var statusChanged = (status !== leads[idx].status);
     if (statusChanged) {
@@ -4168,7 +4169,7 @@ function exportCSV() {
 
 function logTouch(leadId, canal, tipo, resultado) {
   const lead = DB.getLeads().find(l=>l.id===leadId);
-  if (!lead) return;
+  if (!lead) { console.warn('[logTouch] Lead não encontrado:', leadId); return; }
   const state = DB.getState();
   const log = DB.getTouchlog();
   log.push({
@@ -4179,6 +4180,8 @@ function logTouch(leadId, canal, tipo, resultado) {
     humor: state.humor||7, energia: state.energia||7,
     icpTags: lead.tags||[], status: lead.status, fluxo: lead.fluxo||'FRIO'
   });
+  // Limitar touchlog a 500 entradas (manter os mais recentes)
+  if (log.length > 500) log.splice(0, log.length - 500);
   DB.saveTouchlog(log);
   updateLeadCtx(leadId);
   calcAnalytics();
@@ -4581,7 +4584,7 @@ function addTarefa() {
 function toggleTarefa(id) {
   const tasks = DB.getTasks();
   const idx = tasks.findIndex(t=>t.id===id);
-  if (idx<0) return;
+  if (idx<0) { showToast('⚠ Item não encontrado'); return; }
   tasks[idx].done = !tasks[idx].done;
   DB.saveTasks(tasks);
   renderTarefas();
@@ -4641,6 +4644,10 @@ function applyTheme() {
 // INIT
 // ═══════════════════════════════════════════════════
 async function init() {
+  // Guard: limpar fallback timeout se init() chamado normalmente
+  if (window._initTimeout) { clearTimeout(window._initTimeout); window._initTimeout = null; }
+  if (window._initCalled) return; // Evitar double-init
+  window._initCalled = true;
   // NUNCA carrega leads demo se existe sessão Supabase — sync vai carregar os dados reais
   // Demo só carrega em file:// (desenvolvimento local) sem sessão ativa
   const temSessao = localStorage.getItem('tc_vendedor_id') || localStorage.getItem('trinca-crm-auth');
@@ -4663,6 +4670,7 @@ async function init() {
       }
     } catch(e) {
       console.warn('⚠️ Não foi possível restaurar backup do servidor:', e.message);
+      showToast('⚠ Backup do servidor indisponível — usando dados locais');
       // Demo local apenas
       const demo = [
         {id:uuid(),nome:'Ana Paula Ferreira',whatsapp:'(43) 99999-1111',status:'CADENCIA-ATIVA',tags:['PERFIL-EMPRESARIA','NET-WHATSAPP-GRUPO'],ticketEstimado:150000,pilarFraco:'',notas:'Empresária, clínica odonto, interessada em expansão',dataCriacao:today(),ultimaAtualizacao:today(),diaToqueAtual:1,proximoToque:today(),dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
