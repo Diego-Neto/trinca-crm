@@ -144,11 +144,19 @@ const SBLeads = {
   },
 
   async loadAll() {
-    const query = _sb.from('leads').select('*').order('ultima_atualizacao', { ascending: false });
-    // Gestor vê todos; RLS já garante isso
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []).map(r => this._fromSB(r));
+    const PAGE_SIZE = 500;
+    let all = [], from = 0;
+    while (true) {
+      const { data, error } = await _sb.from('leads').select('*')
+        .order('ultima_atualizacao', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all = all.concat(data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    return all.map(r => this._fromSB(r));
   },
 
   async loadSince(timestamp) {

@@ -133,6 +133,16 @@ function calcChampScore(lead) {
          (parseInt(lead.champA)||0) + (parseInt(lead.champM)||0);
 }
 
+var STAGE_PROBABILITY = {
+  'NOVO':5,'CADENCIA-ATIVA':15,'AGUARDANDO-DIAGNOSTICO':35,
+  'PROPOSTA-ENVIADA':60,'NUTRICAO':10,'GELADEIRA':5,'GANHO':100,'PERDIDO':0
+};
+var STAGE_FORECAST = {
+  'NOVO':'PIPELINE','CADENCIA-ATIVA':'PIPELINE','AGUARDANDO-DIAGNOSTICO':'PIPELINE',
+  'PROPOSTA-ENVIADA':'COMPROMETIDO','NUTRICAO':'PIPELINE','GELADEIRA':'FORA',
+  'GANHO':'GANHO','PERDIDO':'FORA'
+};
+
 // Export para Node.js (testes) — no browser são globais automaticamente
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -140,6 +150,7 @@ if (typeof module !== 'undefined' && module.exports) {
     CADENCE_DAYS, calcNextTouch,
     getPhase, getPriority,
     STATUS_FLOW_ALLOWED, STATUS_LABELS, canAdvanceStatus,
-    calcChampScore
+    calcChampScore,
+    STAGE_PROBABILITY, STAGE_FORECAST
   };
 }
