@@ -139,19 +139,19 @@ const SBLeads = {
   async upsert(lead) {
     const row = this._toSB(lead);
     const { error } = await _sb.from('leads').upsert(row, { onConflict: 'id' });
-    if (error) console.warn('[SBLeads.upsert]', error.message);
+    if (error) { console.warn('[SBLeads.upsert]', error.message); throw error; }
   },
 
   async upsertBatch(leads) {
     if (!leads.length) return;
     const rows = leads.map(l => this._toSB(l));
     const { error } = await _sb.from('leads').upsert(rows, { onConflict: 'id' });
-    if (error) console.warn('[SBLeads.upsertBatch]', error.message);
+    if (error) { console.warn('[SBLeads.upsertBatch]', error.message); throw error; }
   },
 
   async delete(id) {
     const { error } = await _sb.from('leads').delete().eq('id', id);
-    if (error) console.warn('[SBLeads.delete]', error.message);
+    if (error) { console.warn('[SBLeads.delete]', error.message); throw error; }
   }
 };
 
@@ -166,7 +166,7 @@ const SBTouchlog = {
       resultado:   entry.resultado,
       data:        entry.data,
     });
-    if (error) console.warn('[SBTouchlog.append]', error.message);
+    if (error) { console.warn('[SBTouchlog.append]', error.message); throw error; }
   },
 
   async loadToday() {
@@ -202,7 +202,7 @@ const SBDebriefs = {
         proximaAcao:          debrief.proximaAcao          || null,
       }
     }, { onConflict: 'id' });
-    if (error) console.warn('[SBDebriefs.upsert]', error.message);
+    if (error) { console.warn('[SBDebriefs.upsert]', error.message); throw error; }
   }
 };
 
@@ -216,7 +216,7 @@ const SBState = {
       energia:     entry.energia,
       fase:        entry.phase || entry.fase || null,
     }, { onConflict: 'vendedor_id,data' });
-    if (error) console.warn('[SBState.upsert]', error.message);
+    if (error) { console.warn('[SBState.upsert]', error.message); throw error; }
   }
 };
 
@@ -235,7 +235,7 @@ const SBTasks = {
       created_at:  t.createdAt || new Date().toISOString().split('T')[0],
     }));
     const { error } = await _sb.from('tasks').upsert(rows, { onConflict: 'id' });
-    if (error) console.warn('[SBTasks.upsertBatch]', error.message);
+    if (error) { console.warn('[SBTasks.upsertBatch]', error.message); throw error; }
   }
 };
 
@@ -247,7 +247,7 @@ const SBConfig = {
       meta:        config.meta || 5,
       dias_uteis:  config.diasUteis || 22,
     }, { onConflict: 'vendedor_id' });
-    if (error) console.warn('[SBConfig.save]', error.message);
+    if (error) { console.warn('[SBConfig.save]', error.message); throw error; }
   }
 };
 
@@ -257,9 +257,33 @@ const SBConfig = {
 async function syncFromSupabase(retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const leads = await SBLeads.loadAll();
-      localStorage.setItem('tc_leads', JSON.stringify(leads));
-      console.log(`[Trinca 4.0] ${leads.length} leads sincronizados do Supabase`);
+      const cloudLeads = await SBLeads.loadAll();
+      // MERGE INTELIGENTE: lead local mais recente ganha sobre cloud
+      const localLeads = JSON.parse(localStorage.getItem('tc_leads') || '[]');
+      const localMap = {};
+      for (const ll of localLeads) { if (ll.id) localMap[ll.id] = ll; }
+      const merged = [];
+      const cloudIds = new Set();
+      for (const cl of cloudLeads) {
+        cloudIds.add(cl.id);
+        const ll = localMap[cl.id];
+        if (ll && ll.ultimaAtualizacao && cl.ultimaAtualizacao && ll.ultimaAtualizacao > cl.ultimaAtualizacao) {
+          // Local é mais recente — manter local e enviar pro Supabase
+          merged.push(ll);
+          SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+        } else {
+          merged.push(cl);
+        }
+      }
+      // Leads que existem só localmente (não estão no cloud)
+      for (const ll of localLeads) {
+        if (ll.id && !cloudIds.has(ll.id)) {
+          merged.push(ll);
+          SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+        }
+      }
+      localStorage.setItem('tc_leads', JSON.stringify(merged));
+      console.log(`[Trinca 4.0] ${merged.length} leads sincronizados (${cloudLeads.length} cloud + merge local)`);
 
       // Sync tasks
       try {
