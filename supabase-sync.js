@@ -8,7 +8,13 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 // ─── INIT ────────────────────────────────────────────
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth: { storageKey: 'trinca-crm-auth' }
+  auth: {
+    storageKey: 'trinca-crm-auth',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    lock: { enabled: false }
+  }
 });
 let _currentUser  = null;
 let _currentPerfil = null;
@@ -883,9 +889,43 @@ document.addEventListener('keydown', (e) => {
     }
   });
 
-  // Verificar sessão existente
+  // Verificar sessão existente — force-refresh se user já autenticado
+  // (onAuthStateChange pode nunca disparar se lock estava orphaned)
   const user = await SBAuth.getUser();
-  if (!user) {
+  if (user) {
+    console.log('[Trinca 4.0] bootstrap: user encontrado, forçando sync imediato');
+    _currentUser = user;
+    // Carregar perfil
+    const GESTORES = ['rodrigues.diegoneto@gmail.com'];
+    const autoRole = GESTORES.includes(user.email) ? 'gestor' : 'vendedor';
+    try {
+      _currentPerfil = await SBPerfil.load(user.id);
+    } catch(e) {
+      const nome = user.user_metadata?.nome || user.email.split('@')[0];
+      const { data } = await _sb.from('perfis').upsert({
+        id: user.id, nome, role: autoRole
+      }, { onConflict: 'id' }).select().single();
+      if (data) _currentPerfil = data;
+    }
+    if (_currentPerfil) {
+      localStorage.setItem('tc_vendedor_id', user.id);
+      localStorage.setItem('tc_vendedor_nome', _currentPerfil.nome);
+      localStorage.setItem('tc_vendedor_role', _currentPerfil.role);
+    }
+    hideLoginScreen();
+    await syncFromSupabase();
+    patchDBForSupabase();
+    // Chamar init() APÓS sync para garantir dados reais
+    if (typeof init === 'function' && !window._initCalled) {
+      clearTimeout(window._initTimeout);
+      window._initCalled = true;
+      init();
+    }
+    PendingQueue.flush().catch(() => {});
+    if (typeof refreshView === 'function') refreshView();
+    if (typeof updateBadges === 'function') updateBadges();
+    if (typeof calcAnalytics === 'function') calcAnalytics();
+  } else {
     showLoginScreen();
     // Sem sessão no bootstrap: garantir que init() rode
     if (typeof init === 'function' && !window._initCalled) {

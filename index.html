@@ -4517,15 +4517,16 @@ function calcNextTouchByStage(lead) {
 
 // init() agora é chamado pelo bootstrap do Supabase (supabase-sync.js)
 // para evitar race condition onde dados demo carregam antes do sync.
-// Fallback: se supabase-sync.js não carregar em 3s, init() roda sozinho.
+// Fallback: se supabase-sync.js não carregar em 8s, init() roda sozinho.
+// (Supabase lock force-acquire leva 5s + auth resolve precisa de mais tempo)
 window._initCalled = false;
 window._initTimeout = setTimeout(() => {
   if (!window._initCalled) {
-    console.warn('[Trinca 4.0] Supabase não carregou em 3s — init() fallback');
+    console.warn('[Trinca 4.0] Supabase não carregou em 8s — init() fallback');
     window._initCalled = true;
     init();
   }
-}, 3000);
+}, 8000);
 </script>
 
 <!-- PLAYBOOK MODAL -->
