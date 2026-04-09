@@ -712,11 +712,42 @@ async function doUpdatePassword() {
   try {
     const { error } = await _sb.auth.updateUser({ password: newPw });
     if (error) throw error;
-    suc.style.display = 'block'; suc.textContent = 'Senha alterada com sucesso!';
-    setTimeout(() => {
+    suc.style.display = 'block'; suc.textContent = 'Senha alterada com sucesso! Carregando dados...';
+    // Aguardar 1.5s para o usuário ler a mensagem, depois fazer sync completo
+    setTimeout(async () => {
       const screen = document.getElementById('reset-pw-screen');
       if (screen) screen.style.display = 'none';
-      // Continuar para o app normalmente
+      // Carregar perfil e dados do Supabase após trocar senha
+      try {
+        const user = await SBAuth.getUser();
+        if (user) {
+          _currentUser = user;
+          const GESTORES = ['rodrigues.diegoneto@gmail.com'];
+          const autoRole = GESTORES.includes(user.email) ? 'gestor' : 'vendedor';
+          try {
+            _currentPerfil = await SBPerfil.load(user.id);
+          } catch(e) {
+            const nome = user.user_metadata?.nome || user.email.split('@')[0];
+            const { data } = await _sb.from('perfis').upsert({
+              id: user.id, nome, role: autoRole
+            }, { onConflict: 'id' }).select().single();
+            if (data) _currentPerfil = data;
+          }
+          if (_currentPerfil) {
+            localStorage.setItem('tc_vendedor_id', user.id);
+            localStorage.setItem('tc_vendedor_nome', _currentPerfil.nome);
+            localStorage.setItem('tc_vendedor_role', _currentPerfil.role);
+          }
+          hideLoginScreen();
+          await syncFromSupabase();
+          patchDBForSupabase();
+          PendingQueue.flush().catch(() => {});
+          if (typeof refreshView === 'function') refreshView();
+          console.log('[Trinca 4.0] Sync completo após reset de senha');
+        }
+      } catch(e) {
+        console.warn('[Trinca 4.0] Erro ao sincronizar após reset de senha:', e.message);
+      }
     }, 1500);
   } catch(e) {
     err.style.display = 'block'; err.textContent = 'Erro: ' + e.message;
@@ -779,6 +810,12 @@ document.addEventListener('keydown', (e) => {
       hideLoginScreen();
       await syncFromSupabase();
       patchDBForSupabase();
+      // Chamar init() APÓS sync para garantir que dados reais sejam renderizados
+      if (typeof init === 'function' && !window._initCalled) {
+        clearTimeout(window._initTimeout);
+        window._initCalled = true;
+        init();
+      }
       // Flush pendentes
       PendingQueue.flush().catch(() => {});
       // Registra listeners UMA VEZ (evita duplicação a cada auth change)
@@ -807,10 +844,18 @@ document.addEventListener('keydown', (e) => {
         brandEl.title = `${role} ${_currentPerfil.nome}`;
       }
       if (typeof refreshView === 'function') refreshView();
+      if (typeof updateBadges === 'function') updateBadges();
+      if (typeof calcAnalytics === 'function') calcAnalytics();
     } else {
       _currentUser  = null;
       _currentPerfil = null;
       showLoginScreen();
+      // Sem sessão: init() roda para preparar a UI (sem dados de leads)
+      if (typeof init === 'function' && !window._initCalled) {
+        clearTimeout(window._initTimeout);
+        window._initCalled = true;
+        init();
+      }
     }
   });
 
@@ -818,6 +863,12 @@ document.addEventListener('keydown', (e) => {
   const user = await SBAuth.getUser();
   if (!user) {
     showLoginScreen();
+    // Sem sessão no bootstrap: garantir que init() rode
+    if (typeof init === 'function' && !window._initCalled) {
+      clearTimeout(window._initTimeout);
+      window._initCalled = true;
+      init();
+    }
   }
 })();
 
