@@ -187,6 +187,13 @@
     <!-- Desempenho vs Meta (preservado) -->
     <div class="calc-box">
       <div class="calc-title">📈 Desempenho vs Meta</div>
+      <div style="display:flex;gap:8px;margin:8px 12px;align-items:center">
+        <span style="font-size:11px;color:var(--muted);font-weight:700">Período:</span>
+        <button class="filter-btn" onclick="setPeriodFilter('mes')" id="pf-mes">Este Mês</button>
+        <button class="filter-btn" onclick="setPeriodFilter('trimestre')" id="pf-tri">Trimestre</button>
+        <button class="filter-btn" onclick="setPeriodFilter('ano')" id="pf-ano">Ano</button>
+        <button class="filter-btn" onclick="setPeriodFilter('all')" id="pf-all">Tudo</button>
+      </div>
       <div id="performance-display"></div>
     </div>
 
@@ -3054,6 +3061,17 @@ var PREV_QUARTERS = [
   {id:'Q4',m:[9,10,11],obj:'Preparar escala com assistente SDR e aumentar ticket médio'}
 ];
 var PREV_META = 1000000, PREV_TICKET = 235000, PREV_ICPPCT = 60;
+var PERIOD_FILTER = localStorage.getItem('tc_period_filter') || 'mes';
+
+function getPeriodRange() {
+  var now = new Date();
+  if (PERIOD_FILTER === 'mes') return { inicio: now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01', fim: today() };
+  if (PERIOD_FILTER === 'trimestre') { var q=Math.floor(now.getMonth()/3); return { inicio: new Date(now.getFullYear(),q*3,1).toISOString().split('T')[0], fim: today() }; }
+  if (PERIOD_FILTER === 'ano') return { inicio: now.getFullYear()+'-01-01', fim: today() };
+  return { inicio: '2020-01-01', fim: '2099-12-31' };
+}
+
+function setPeriodFilter(val) { PERIOD_FILTER=val; localStorage.setItem('tc_period_filter',val); refreshView(); }
 var PREV_MI = new Date().getMonth(), PREV_QI = Math.floor(PREV_MI/3), PREV_TAB = 0;
 
 function prevCalc(dias) {
@@ -3270,13 +3288,22 @@ function renderPrevisibilidade() {
 
   // Performance display + KPIs + funil
   var leads=DB.getLeads();
-  var ganhos=leads.filter(function(l){return l.status==='GANHO';}).length;
+  var range = getPeriodRange();
+  var ganhos=leads.filter(function(l){
+    if (l.status !== 'GANHO') return false;
+    var d = l.dataGanho || l.ultimaAtualizacao || l.dataCriacao;
+    return d >= range.inicio && d <= range.fim;
+  }).length;
   var pipeline=leads.filter(function(l){return !['GANHO','PERDIDO'].includes(l.status);}).length;
   var propostas=leads.filter(function(l){return l.status==='PROPOSTA-ENVIADA';}).length;
   var diags=leads.filter(function(l){return l.status==='AGUARDANDO-DIAGNOSTICO';}).length;
   var _novos=leads.filter(function(l){return l.status==='NOVO';}).length;
   var _cad=leads.filter(function(l){return l.status==='CADENCIA-ATIVA';}).length;
-  var _perd=leads.filter(function(l){return l.status==='PERDIDO';}).length;
+  var _perd=leads.filter(function(l){
+    if (l.status !== 'PERDIDO') return false;
+    var d = l.dataPerda || l.ultimaAtualizacao || l.dataCriacao;
+    return d >= range.inicio && d <= range.fim;
+  }).length;
   var _gel=leads.filter(function(l){return l.status==='GELADEIRA';}).length;
   var _nut=leads.filter(function(l){return l.status==='NUTRICAO';}).length;
   var _tot=leads.length;
@@ -3300,12 +3327,13 @@ function renderPrevisibilidade() {
     if(_i<_fs.length-1&&_fs[_i].c>0)_fh+='<div style="text-align:center;font-size:9px;color:var(--muted);margin:-2px 0 2px 78px">↓ '+Math.round(_fs[_i+1].c/_fs[_i].c*100)+'% conv.</div>';
   }
   _fh+='<div style="margin-top:8px;display:flex;gap:12px;font-size:10px;color:var(--muted)"><span>❄️ Geladeira: '+_gel+'</span><span>🌱 Nutrição: '+_nut+'</span><span>❌ Perdidos: '+_perd+'</span></div>';
+  var periodoLabel = PERIOD_FILTER==='mes'?'Mês':PERIOD_FILTER==='trimestre'?'Trimestre':PERIOD_FILTER==='ano'?'Ano':'Todos';
   document.getElementById('performance-display').innerHTML =
     '<div class="metrics-grid">'+
       '<div class="metric-card"><div class="metric-label">No Pipeline</div><div class="metric-value" style="color:var(--purple2)">'+pipeline+'</div><div class="metric-target">leads ativos</div></div>'+
       '<div class="metric-card"><div class="metric-label">Diagnósticos</div><div class="metric-value" style="color:var(--orange)">'+diags+'</div><div class="metric-target">agendados</div></div>'+
       '<div class="metric-card"><div class="metric-label">Propostas</div><div class="metric-value" style="color:var(--pink)">'+propostas+'</div><div class="metric-target">enviadas</div></div>'+
-      '<div class="metric-card"><div class="metric-label">Contratos</div><div class="metric-value" style="color:var(--green)">'+ganhos+'</div><div class="metric-target">meta: '+meta+'/mês</div><div class="progress-bar"><div class="progress-fill '+(ganhos>=meta?'ok':ganhos>meta*0.5?'warn':'bad')+'" style="width:'+Math.min(100,ganhos/meta*100)+'%"></div></div></div>'+
+      '<div class="metric-card"><div class="metric-label">Contratos ('+periodoLabel+')</div><div class="metric-value" style="color:var(--green)">'+ganhos+'</div><div class="metric-target">meta: '+meta+'/mês</div><div class="progress-bar"><div class="progress-fill '+(ganhos>=meta?'ok':ganhos>meta*0.5?'warn':'bad')+'" style="width:'+Math.min(100,ganhos/meta*100)+'%"></div></div></div>'+
     '</div>'+
     '<div style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">'+
       '<div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:10px">📊 KPIs do Pipeline (calculados do CRM)</div>'+
@@ -3318,6 +3346,11 @@ function renderPrevisibilidade() {
     '</div>'+
     '<div style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">'+
       '<div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:10px">🔻 Funil de Conversão</div>'+_fh+'</div>';
+
+  // Highlight botão de período ativo
+  document.querySelectorAll('#pf-mes,#pf-tri,#pf-ano,#pf-all').forEach(function(b){b.classList.remove('active');});
+  var activeBtn = document.getElementById('pf-'+PERIOD_FILTER.slice(0,3));
+  if (activeBtn) activeBtn.classList.add('active');
 }
 
 function saveWeekMetrics() {
