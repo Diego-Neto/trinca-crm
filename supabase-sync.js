@@ -7,13 +7,18 @@ const SUPABASE_URL  = 'https://fzocybokxulzchhkupbj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6b2N5Ym9reHVsemNoaGt1cGJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDk1OTEsImV4cCI6MjA5MDUyNTU5MX0.q2se5gYIPIuWK-s5bcPWm9NtWhpzLbl_zC1OzXrmZ7o';
 
 // ─── INIT ────────────────────────────────────────────
+// Desabilitar navigator.locks que causa "lock not released" em mobile/PWA
+// Seguro pois o CRM é single-tab
+if (typeof navigator !== 'undefined' && !navigator.locks) {
+  navigator.locks = { request: (name, cb) => cb({ name }) };
+}
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     storageKey: 'trinca-crm-auth',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    lock: { enabled: false }
+    flowType: 'implicit'
   }
 });
 let _currentUser  = null;
@@ -679,11 +684,14 @@ function hideLoginScreen() {
 }
 
 async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const senha = document.getElementById('login-senha').value;
+  const emailEl = document.getElementById('login-email');
+  const senhaEl = document.getElementById('login-senha');
+  if (!emailEl || !senhaEl) return; // Tela de login não existe ainda
+  const email = emailEl.value.trim();
+  const senha = senhaEl.value;
   const btn   = document.getElementById('login-btn');
   const err   = document.getElementById('login-error');
-  if (!email || !senha) { err.style.display = 'block'; err.textContent = 'Preencha e-mail e senha.'; return; }
+  if (!email || !senha) { if (err) { err.style.display = 'block'; err.textContent = 'Preencha e-mail e senha.'; } return; }
   btn.disabled = true;
   btn.textContent = 'Entrando...';
   err.style.display = 'none';
@@ -699,7 +707,9 @@ async function doLogin() {
 }
 
 async function doResetPassword() {
-  const email = document.getElementById('login-email').value.trim();
+  const emailEl = document.getElementById('login-email');
+  if (!emailEl) return;
+  const email = emailEl.value.trim();
   const msg = document.getElementById('login-reset-msg');
   if (!email) { msg.style.display = 'block'; msg.style.color = '#fca5a5'; msg.textContent = 'Digite seu e-mail acima primeiro.'; return; }
   try {
