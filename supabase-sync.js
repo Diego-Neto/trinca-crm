@@ -498,6 +498,35 @@ const PendingQueue = {
   }
 };
 
+// ─── TOAST DE ERRO VISÍVEL ────────────────────────
+function showSyncError(msg) {
+  const id = 'sync-error-toast-' + Date.now();
+  const toast = document.createElement('div');
+  toast.id = id;
+  toast.style.cssText = 'position:fixed;bottom:70px;right:12px;z-index:9999;background:#1a1f2e;border:1px solid #ef4444;border-radius:8px;padding:10px 14px;font-size:12px;color:#fca5a5;max-width:320px;font-family:system-ui,sans-serif;display:flex;flex-direction:column;gap:6px;animation:fadeIn .2s;';
+  toast.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
+      <span style="flex:1;word-break:break-word;">${msg}</span>
+      <button onclick="this.closest('div[id^=sync-error-toast]').remove()" style="background:none;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:0;line-height:1;">✕</button>
+    </div>
+    <button onclick="PendingQueue.clear();this.closest('div[id^=sync-error-toast]').remove();" style="background:rgba(239,68,68,0.15);border:1px solid #ef4444;border-radius:4px;color:#fca5a5;font-size:11px;padding:4px 8px;cursor:pointer;align-self:flex-start;">🗑 Limpar fila</button>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 8000);
+}
+
+// ─── TOAST GENÉRICO (informativo) ─────────────────
+function showSyncToast(msg, color) {
+  color = color || '#a78bfa';
+  const id = 'sync-toast-' + Date.now();
+  const toast = document.createElement('div');
+  toast.id = id;
+  toast.style.cssText = 'position:fixed;bottom:70px;right:12px;z-index:9999;background:#1a1f2e;border:1px solid ' + color + ';border-radius:8px;padding:10px 14px;font-size:12px;color:' + color + ';max-width:320px;font-family:system-ui,sans-serif;';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 5000);
+}
+
 // ─── SYNC STATUS INDICATOR ─────────────────────────
 const SyncStatus = {
   _pending: 0,
@@ -517,8 +546,26 @@ const SyncStatus = {
     return el;
   },
 
+  _showQueueDetails() {
+    const queue = PendingQueue.getAll();
+    const n = queue.length;
+    if (n === 0) { showSyncToast('Fila vazia — tudo sincronizado.', '#10b981'); return; }
+    const tipos = {};
+    let oldest = Date.now();
+    for (const op of queue) {
+      tipos[op.type] = (tipos[op.type] || 0) + 1;
+      if (op.ts && op.ts < oldest) oldest = op.ts;
+    }
+    const ageMin = Math.round((Date.now() - oldest) / 60000);
+    const resumo = Object.entries(tipos).map(([t, c]) => `${t}: ${c}`).join(', ');
+    showSyncError(`📋 Fila pendente: ${n} ite${n > 1 ? 'ns' : 'm'}\n${resumo}\nMais antigo: ${ageMin} min atrás`);
+  },
+
   show(state) {
     const el = this._getEl();
+    el.onclick = null;
+    el.style.cursor = 'default';
+    el.style.pointerEvents = 'none';
     if (state === 'syncing') {
       el.textContent = '🔄 Sincronizando...';
       el.style.background = 'rgba(139,92,246,0.15)'; el.style.color = '#a78bfa'; el.style.opacity = '1';
@@ -528,12 +575,16 @@ const SyncStatus = {
       setTimeout(() => { el.style.opacity = '0'; }, 2000);
     } else if (state === 'error') {
       const n = PendingQueue.count;
-      el.textContent = `⚠ Offline — ${n} pendente${n>1?'s':''}`;
+      el.textContent = `⚠ Offline — ${n} pendente${n>1?'s':''} (toque p/ detalhes)`;
       el.style.background = 'rgba(239,68,68,0.15)'; el.style.color = '#ef4444'; el.style.opacity = '1';
+      el.style.cursor = 'pointer'; el.style.pointerEvents = 'auto';
+      el.onclick = () => this._showQueueDetails();
     } else if (state === 'pending') {
       const n = PendingQueue.count;
-      el.textContent = `⏳ ${n} pendente${n>1?'s':''} — aguardando rede`;
+      el.textContent = `⏳ ${n} pendente${n>1?'s':''} — aguardando rede (toque p/ detalhes)`;
       el.style.background = 'rgba(245,158,11,0.15)'; el.style.color = '#f59e0b'; el.style.opacity = '1';
+      el.style.cursor = 'pointer'; el.style.pointerEvents = 'auto';
+      el.onclick = () => this._showQueueDetails();
     }
   },
 
@@ -556,6 +607,8 @@ const SyncStatus = {
       // Salva na fila para tentar depois
       PendingQueue.add({ type, data });
       this.show('error');
+      const nomes = { leads: 'leads', debrief: 'debrief', state: 'estado', tasks: 'tarefas', config: 'configuração', touchlog: 'registro de toques' };
+      showSyncError('Erro ao salvar ' + (nomes[type] || type) + ': ' + e.message);
       console.warn('[Sync Error]', type, e.message);
     });
   }
@@ -900,7 +953,11 @@ document.addEventListener('keydown', (e) => {
         window._initCalled = true;
         init();
       }
-      // Flush pendentes
+      // Flush pendentes — informar ao usuário
+      if (PendingQueue.count > 0) {
+        const _n = PendingQueue.count;
+        showSyncToast('🔄 Enviando ' + _n + ' ite' + (_n > 1 ? 'ns' : 'm') + ' pendente' + (_n > 1 ? 's' : '') + '...', '#a78bfa');
+      }
       PendingQueue.flush().catch(() => {});
       // Registra listeners UMA VEZ (evita duplicação a cada auth change)
       if (!window._trincaListenersRegistered) {
@@ -975,6 +1032,11 @@ document.addEventListener('keydown', (e) => {
       window._initCalled = true;
       init();
     }
+    // Flush pendentes — informar ao usuário
+    if (PendingQueue.count > 0) {
+      const _n2 = PendingQueue.count;
+      showSyncToast('🔄 Enviando ' + _n2 + ' ite' + (_n2 > 1 ? 'ns' : 'm') + ' pendente' + (_n2 > 1 ? 's' : '') + '...', '#a78bfa');
+    }
     PendingQueue.flush().catch(() => {});
     if (typeof refreshView === 'function') refreshView();
     if (typeof updateBadges === 'function') updateBadges();
@@ -995,6 +1057,32 @@ window.SBAuth   = SBAuth;
 window.SBLeads  = SBLeads;
 window._getCurrentUser  = () => _currentUser;
 window._getCurrentPerfil = () => _currentPerfil;
+
+// ─── FORCE SYNC NOW ──────────────────────────────────
+async function forceSyncNow() {
+  if (!_currentUser) {
+    showSyncError('Faça login primeiro');
+    return;
+  }
+  const n = PendingQueue.count;
+  if (n === 0) {
+    showSyncToast('Fila vazia — nada para sincronizar.', '#10b981');
+    return;
+  }
+  showSyncToast('🔄 Enviando ' + n + ' ite' + (n > 1 ? 'ns' : 'm') + ' pendente' + (n > 1 ? 's' : '') + '...', '#a78bfa');
+  try {
+    await PendingQueue.flush();
+    const remaining = PendingQueue.count;
+    if (remaining === 0) {
+      showSyncToast('✓ Tudo sincronizado!', '#10b981');
+    } else {
+      showSyncError(remaining + ' ite' + (remaining > 1 ? 'ns' : 'm') + ' ainda pendente' + (remaining > 1 ? 's' : '') + ' após tentativa.');
+    }
+  } catch (e) {
+    showSyncError('Erro ao sincronizar: ' + e.message);
+  }
+}
+window.forceSyncNow = forceSyncNow;
 
 // ─── HELPER: Exportar leads do localStorage para console ───
 // Cole no console: exportLeads()
