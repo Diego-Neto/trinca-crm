@@ -67,10 +67,11 @@
     <!-- HOJE: Barra de progresso gigante fixa -->
     <div id="mega-progress" class="mega-progress" style="display:none">
       <div class="mega-progress-info">
-        <span class="mega-progress-label">Progresso da Cadência</span>
-        <span class="mega-progress-count" id="mega-progress-count">0/0</span>
+        <span class="mega-progress-label">Progresso da Cadência <span class="mega-progress-pct" id="mega-progress-pct">0%</span></span>
+        <span class="mega-progress-count" id="mega-progress-count">0/0 toques feitos hoje</span>
       </div>
       <div class="mega-progress-bar"><div class="mega-progress-fill" id="mega-progress-fill"></div></div>
+      <div class="mega-progress-milestone" id="mega-progress-milestone" style="display:none"></div>
     </div>
 
     <!-- HOJE: State Check inline -->
@@ -998,11 +999,14 @@ function renderStreak() {
 function celebrateMilestone(count, leadNome) {
   const msgs = {1:'1ª ação do dia! Começou!',5:'5 ações hoje! 🚀',10:'10 interações! Máquina!',20:'20 hoje! Modo turbo!',50:'50 ações! Lendário!'};
   if (!msgs[count]) return;
-  const sub = leadNome ? 'Último toque: <strong>' + leadNome + '</strong>' : 'Continue assim!';
+  const sub = leadNome
+    ? 'Você tocou <strong>' + leadNome + '</strong>! 🔥 ' + count + ' toques hoje!'
+    : 'Continue assim! ' + count + ' toques hoje!';
   const el = document.createElement('div');
   el.className = 'celebration';
   el.innerHTML = '<div class="celebration-inner"><span class="celebration-emoji">🎉</span><div class="celebration-text"><strong>' + msgs[count] + '</strong><small>' + sub + '</small></div></div>';
   document.body.appendChild(el);
+  // Duração longa (5s visível + 500ms fade out) — Dr. Barkley: celebração mais longa para TDAH
   setTimeout(()=>{el.classList.add('out'); setTimeout(()=>el.remove(),500);},5000);
 }
 
@@ -2336,6 +2340,9 @@ function salvarEstadoHoje() {
   var energia = parseInt(document.getElementById('hoje-energia').value);
   var phase = getPhase(humor, energia);
   DB.saveState({date: today(), humor: humor, energia: energia, phase: phase});
+  // Gravar hora do salvamento para re-check das 14h
+  var agora = new Date();
+  localStorage.setItem('tc_state_time_' + today(), agora.getHours() + ':' + agora.getMinutes());
 
   var history = DB.getStateHistory();
   var existing = history.findIndex(function(h) { return h.date === today(); });
@@ -2375,6 +2382,12 @@ function checkRecheck14() {
   // Só mostrar se o estado da manhã já foi salvo
   var savedState = DB.getState();
   if (savedState.date !== today()) return;
+  // Verificar se o estado foi salvo antes das 12h (Dr. Barkley: re-check emocional à tarde)
+  var savedTime = localStorage.getItem('tc_state_time_' + today());
+  if (savedTime) {
+    var savedHour = parseInt(savedTime.split(':')[0]);
+    if (savedHour >= 12) return; // Estado salvo depois das 12h, não precisa re-check
+  }
   // Preencher com valores atuais
   document.getElementById('recheck-humor').value = savedState.humor || 7;
   document.getElementById('recheck-humor-val').textContent = savedState.humor || 7;
@@ -2382,8 +2395,8 @@ function checkRecheck14() {
   document.getElementById('recheck-energia-val').textContent = savedState.energia || 7;
   document.getElementById('modal-recheck14').classList.add('open');
 }
-// Verificar re-check a cada 5 minutos
-setInterval(checkRecheck14, 5 * 60 * 1000);
+// Verificar re-check a cada 30 minutos (Dr. Barkley: intervalo adequado para TDAH)
+setInterval(checkRecheck14, 30 * 60 * 1000);
 setTimeout(checkRecheck14, 3000);
 
 function renderHojeHeader() {
@@ -2427,17 +2440,36 @@ function renderHojeHeader() {
   var todayTouches = touchlog.filter(function(e) { return e.data === t; }).length;
   var totalAB = countA + countB;
 
-  // MEGA) Barra de progresso gigante fixa
+  // MEGA) Barra de progresso gigante fixa com celebração a cada 25%
   var megaEl = document.getElementById('mega-progress');
   var megaFill = document.getElementById('mega-progress-fill');
   var megaCount = document.getElementById('mega-progress-count');
+  var megaPctEl = document.getElementById('mega-progress-pct');
+  var megaMilestone = document.getElementById('mega-progress-milestone');
   if (megaEl && megaFill && megaCount) {
     if (totalAB > 0) {
       megaEl.style.display = 'block';
       var megaPct = Math.min(100, Math.round((todayTouches / totalAB) * 100));
+      var prevPct = parseInt(megaFill.getAttribute('data-prev-pct') || '0');
       megaFill.style.width = megaPct + '%';
-      megaCount.textContent = todayTouches + '/' + totalAB;
+      megaCount.textContent = todayTouches + '/' + totalAB + ' toques feitos hoje';
       megaFill.setAttribute('data-pct', megaPct + '%');
+      if (megaPctEl) megaPctEl.textContent = megaPct + '%';
+      // Celebração a cada 25%
+      var milestoneMsgs = {25:'25% feito! Bom começo! 💪',50:'Metade concluída! 🔥',75:'75%! Quase lá! 🚀',100:'100%! Dia completo! 🏆'};
+      var prevMilestone = Math.floor(prevPct / 25) * 25;
+      var currMilestone = Math.floor(megaPct / 25) * 25;
+      if (currMilestone > prevMilestone && currMilestone >= 25 && milestoneMsgs[currMilestone]) {
+        megaEl.classList.remove('flash-gold');
+        void megaEl.offsetWidth; // force reflow
+        megaEl.classList.add('flash-gold');
+        if (megaMilestone) {
+          megaMilestone.style.display = 'block';
+          megaMilestone.textContent = milestoneMsgs[currMilestone];
+          setTimeout(function(){ if(megaMilestone) megaMilestone.style.display = 'none'; }, 4000);
+        }
+      }
+      megaFill.setAttribute('data-prev-pct', megaPct);
     } else {
       megaEl.style.display = 'none';
     }
