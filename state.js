@@ -75,9 +75,14 @@ function _get(key) {
 
 function _set(key, value) {
   _cache[key] = value;
+  if (key === 'tc_leads' || key.startsWith('tc_ml_')) {
+    _openIDB().then(function(db) { _idbPut(db, key, value); }).catch(function() {
+      try { localStorage.setItem(key, value); } catch(e) {}
+    });
+    return;
+  }
   localStorage.setItem(key, value);
-  // Background persist to IndexedDB (fire-and-forget)
-  _openIDB().then(db => _idbPut(db, key, value)).catch(() => {});
+  _openIDB().then(function(db) { _idbPut(db, key, value); }).catch(function(){});
 }
 
 // --- Migration: localStorage → IndexedDB (runs once on load) ---
@@ -92,14 +97,24 @@ async function _migrateToIDB() {
         const val = await _idbGet(db, key);
         if (val !== undefined) _cache[key] = val;
       }
-      // Also hydrate message logs
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('tc_ml_')) {
-          const val = await _idbGet(db, k);
-          if (val !== undefined) _cache[k] = val;
-        }
-      }
+      // Hydrate message logs from IDB (tc_ml_* are IDB-only now)
+      await new Promise(function(resolve) {
+        var tx = db.transaction(_STORE, 'readonly');
+        var store = tx.objectStore(_STORE);
+        var req = store.openCursor();
+        req.onsuccess = function() {
+          var cursor = req.result;
+          if (cursor) {
+            if (cursor.key && typeof cursor.key === 'string' && cursor.key.startsWith('tc_ml_')) {
+              _cache[cursor.key] = cursor.value;
+            }
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        req.onerror = function() { resolve(); };
+      });
       return;
     }
     // First run: copy localStorage → IDB
@@ -118,6 +133,12 @@ async function _migrateToIDB() {
         if (val) await _idbPut(db, k, val);
       }
     }
+    // Remove message logs do localStorage (agora são IDB-only)
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var k = localStorage.key(i);
+      if (k && k.startsWith('tc_ml_')) localStorage.removeItem(k);
+    }
+    console.log('[State] Message logs migrados para IndexedDB, removidos do localStorage');
     await _idbPut(db, '_migrated', true);
     console.log('[State] Migração localStorage → IndexedDB concluída');
   } catch (e) {
@@ -182,7 +203,11 @@ var DB = {
   getLeadCtx: () => JSON.parse(_get('tc_lead_ctx') || '{}'),
   saveLeadCtx: (c) => _set('tc_lead_ctx', JSON.stringify(c)),
   getMsgLog: (leadId) => JSON.parse(_get('tc_ml_'+leadId) || '[]'),
-  saveMsgLog: (leadId, logs) => _set('tc_ml_'+leadId, JSON.stringify(logs.slice(-10))),
+  saveMsgLog: function(leadId, logs) {
+    var json = JSON.stringify(logs.slice(-10));
+    _cache['tc_ml_'+leadId] = json;
+    _openIDB().then(function(db) { _idbPut(db, 'tc_ml_'+leadId, json); }).catch(function(){});
+  },
   // Invalida cache em memória — chamar após sync do Supabase gravar no localStorage
   invalidateCache: () => _invalidateCache(),
 };
