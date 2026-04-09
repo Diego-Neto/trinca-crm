@@ -570,6 +570,30 @@
   <div id="focus-inline-body"></div>
 </div>
 
+<!-- MODAL RE-CHECK EMOCIONAL 14H -->
+<div class="modal-bg" id="modal-recheck14">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <div class="modal-title">☀️ Check-in da Tarde</div>
+      <button class="modal-close" onclick="closeModal('modal-recheck14')">✕</button>
+    </div>
+    <div style="padding:16px">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Como você está agora? Atualizar ajuda a calibrar suas ações da tarde.</p>
+      <div class="hoje-slider-row">
+        <label>Humor</label>
+        <input type="range" min="1" max="10" value="7" id="recheck-humor" oninput="document.getElementById('recheck-humor-val').textContent=this.value">
+        <span id="recheck-humor-val">7</span>
+      </div>
+      <div class="hoje-slider-row">
+        <label>Energia</label>
+        <input type="range" min="1" max="10" value="7" id="recheck-energia" oninput="document.getElementById('recheck-energia-val').textContent=this.value">
+        <span id="recheck-energia-val">7</span>
+      </div>
+      <button class="hoje-state-btn" onclick="salvarRecheck14()" style="width:100%;margin-top:8px">Atualizar Estado</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL AGUARDANDO RETORNO -->
 <div class="modal-bg" id="modal-aguardando">
   <div class="modal-box">
@@ -1901,6 +1925,31 @@ function focoCardOut(callback) {
   }
 }
 
+var _focoCountdownTimer = null;
+function focoCountdown(secs, callback) {
+  if (_focoCountdownTimer) clearInterval(_focoCountdownTimer);
+  var target = document.getElementById('focus-body') || document.getElementById('focus-inline-body');
+  if (!target) { if (callback) callback(); return; }
+  var remaining = secs;
+  target.innerHTML = '<div class="foco-countdown"><div class="foco-countdown-circle"><span class="foco-countdown-num" id="foco-cd-num">' + remaining + '</span></div><div class="foco-countdown-label">Respire. Próximo lead em breve.</div><button class="fo-exit" onclick="focoCountdownSkip()">Pular ▶</button></div>';
+  window._focoCountdownCallback = callback;
+  _focoCountdownTimer = setInterval(function() {
+    remaining--;
+    var el = document.getElementById('foco-cd-num');
+    if (el) el.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(_focoCountdownTimer);
+      _focoCountdownTimer = null;
+      if (callback) callback();
+    }
+  }, 1000);
+}
+function focoCountdownSkip() {
+  if (_focoCountdownTimer) clearInterval(_focoCountdownTimer);
+  _focoCountdownTimer = null;
+  if (window._focoCountdownCallback) window._focoCountdownCallback();
+}
+
 function focoNaoAtendeu(id) {
   var leads = DB.getLeads();
   var idx = leads.findIndex(function(l) { return l.id === id; });
@@ -2181,6 +2230,43 @@ function salvarEstadoHoje() {
   renderCadencia();
   showToast('Estado salvo! Humor: ' + humor + '/10 | Energia: ' + energia + '/10');
 }
+
+// Re-check emocional às 14h
+function salvarRecheck14() {
+  var humor = parseInt(document.getElementById('recheck-humor').value);
+  var energia = parseInt(document.getElementById('recheck-energia').value);
+  var phase = getPhase(humor, energia);
+  DB.saveState({date: today(), humor: humor, energia: energia, phase: phase});
+  var history = DB.getStateHistory();
+  var existing = history.findIndex(function(h) { return h.date === today(); });
+  var entry = {date: today(), humor: humor, energia: energia, phase: phase};
+  if (existing >= 0) history[existing] = entry; else history.push(entry);
+  if (history.length > 30) history.shift();
+  DB.saveStateHistory(history);
+  updateStateDisplay();
+  closeModal('modal-recheck14');
+  showToast('Estado atualizado! Humor: ' + humor + '/10 | Energia: ' + energia + '/10');
+  localStorage.setItem('recheck14_' + today(), '1');
+  renderCadencia();
+}
+
+function checkRecheck14() {
+  var now = new Date();
+  if (now.getHours() < 14) return;
+  if (localStorage.getItem('recheck14_' + today())) return;
+  // Só mostrar se o estado da manhã já foi salvo
+  var savedState = DB.getState();
+  if (savedState.date !== today()) return;
+  // Preencher com valores atuais
+  document.getElementById('recheck-humor').value = savedState.humor || 7;
+  document.getElementById('recheck-humor-val').textContent = savedState.humor || 7;
+  document.getElementById('recheck-energia').value = savedState.energia || 7;
+  document.getElementById('recheck-energia-val').textContent = savedState.energia || 7;
+  document.getElementById('modal-recheck14').classList.add('open');
+}
+// Verificar re-check a cada 5 minutos
+setInterval(checkRecheck14, 5 * 60 * 1000);
+setTimeout(checkRecheck14, 3000);
 
 function renderHojeHeader() {
   var t = today();
