@@ -347,6 +347,8 @@ async function syncFromSupabase(retries = 3) {
         }
       } catch(e) { /* config pode não existir ainda */ }
 
+      // Invalida cache em memória para que DB.getLeads() leia os dados novos do localStorage
+      if (typeof DB !== 'undefined' && DB.invalidateCache) DB.invalidateCache();
       console.log('[Trinca 4.0] Sync completo (leads, tasks, state, debriefs, touchlog, config)');
       return;
     } catch (e) {
@@ -777,24 +779,27 @@ document.addEventListener('keydown', (e) => {
       hideLoginScreen();
       await syncFromSupabase();
       patchDBForSupabase();
-      // Flush pendentes + sync ao retornar ao app
+      // Flush pendentes
       PendingQueue.flush().catch(() => {});
-      window.addEventListener('focus', () => {
-        if (_currentUser) {
-          PendingQueue.flush().catch(() => {});
-          syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
-        }
-      });
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && _currentUser) {
-          PendingQueue.flush().catch(() => {});
-          syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
-        }
-      });
-      // Flush quando voltar online
-      window.addEventListener('online', () => {
-        if (_currentUser) { console.log('[Trinca 4.0] Online — flushing...'); PendingQueue.flush().catch(() => {}); }
-      });
+      // Registra listeners UMA VEZ (evita duplicação a cada auth change)
+      if (!window._trincaListenersRegistered) {
+        window._trincaListenersRegistered = true;
+        window.addEventListener('focus', () => {
+          if (_currentUser) {
+            PendingQueue.flush().catch(() => {});
+            syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
+          }
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden && _currentUser) {
+            PendingQueue.flush().catch(() => {});
+            syncFromSupabase().then(() => { if (typeof refreshView === 'function') refreshView(); });
+          }
+        });
+        window.addEventListener('online', () => {
+          if (_currentUser) { console.log('[Trinca 4.0] Online — flushing...'); PendingQueue.flush().catch(() => {}); }
+        });
+      }
       // Atualiza o header com o nome do vendedor
       const brandEl = document.querySelector('.brand');
       if (brandEl && _currentPerfil) {

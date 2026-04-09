@@ -4364,43 +4364,38 @@ function applyTheme() {
 // INIT
 // ═══════════════════════════════════════════════════
 async function init() {
-  // Se não tiver leads e estiver no servidor local, restaura o backup automaticamente
-  // Não carrega demo se usuário já tem sessão Supabase ativa (sync vai carregar os dados reais)
-  if (DB.getLeads().length === 0 && !localStorage.getItem('tc_vendedor_id')) {
-    const noServidor = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    if (noServidor) {
-      try {
-        const backup = await fetch('/api/restore').then(r => r.json());
-        if (backup.leads && backup.leads.length > 0) {
-          localStorage.setItem('tc_leads', JSON.stringify(backup.leads));
-          if (backup.debriefs)      localStorage.setItem('tc_debriefs', JSON.stringify(backup.debriefs));
-          if (backup.metrics)       localStorage.setItem('tc_metrics', JSON.stringify(backup.metrics));
-          if (backup.stateHistory)  localStorage.setItem('tc_state_history', JSON.stringify(backup.stateHistory));
-          if (backup.touchlog)      localStorage.setItem('tc_touchlog', JSON.stringify(backup.touchlog));
-          if (backup.tasks)         localStorage.setItem('tc_tasks', JSON.stringify(backup.tasks));
-          if (backup.config)        localStorage.setItem('tc_config', JSON.stringify(backup.config));
-          if (backup.analytics)     localStorage.setItem('tc_analytics', JSON.stringify(backup.analytics));
-          console.log('✅ Backup restaurado: ' + backup.leads.length + ' leads carregados do servidor.');
-        }
-      } catch(e) {
-        console.warn('⚠️ Não foi possível restaurar backup do servidor:', e.message);
-        // Fallback para demo
-        const demo = [
-          {id:uuid(),nome:'Ana Paula Ferreira',whatsapp:'(43) 99999-1111',status:'CADENCIA-ATIVA',tags:['PERFIL-EMPRESARIA','NET-WHATSAPP-GRUPO'],ticketEstimado:150000,pilarFraco:'',notas:'Empresária, clínica odonto, interessada em expansão',dataCriacao:today(),ultimaAtualizacao:today(),diaToqueAtual:1,proximoToque:today(),dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
-          {id:uuid(),nome:'Beatriz Costa',whatsapp:'(43) 99999-4444',status:'NOVO',tags:['PERFIL-JOVEM','NET-INSTAGRAM'],ticketEstimado:80000,pilarFraco:'',notas:'Jovem, começando a investir. Viu story no Instagram.',dataCriacao:today(),ultimaAtualizacao:today(),diaToqueAtual:0,proximoToque:today(),dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
-        ];
-        DB.saveLeads(demo);
+  // NUNCA carrega leads demo se existe sessão Supabase — sync vai carregar os dados reais
+  // Demo só carrega em file:// (desenvolvimento local) sem sessão ativa
+  const temSessao = localStorage.getItem('tc_vendedor_id') || localStorage.getItem('trinca-crm-auth');
+  const isLocal = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  if (DB.getLeads().length === 0 && !temSessao && isLocal) {
+    // Só carrega demo em ambiente local sem sessão
+    try {
+      const backup = await fetch('/api/restore').then(r => r.json());
+      if (backup.leads && backup.leads.length > 0) {
+        localStorage.setItem('tc_leads', JSON.stringify(backup.leads));
+        if (backup.debriefs)      localStorage.setItem('tc_debriefs', JSON.stringify(backup.debriefs));
+        if (backup.metrics)       localStorage.setItem('tc_metrics', JSON.stringify(backup.metrics));
+        if (backup.stateHistory)  localStorage.setItem('tc_state_history', JSON.stringify(backup.stateHistory));
+        if (backup.touchlog)      localStorage.setItem('tc_touchlog', JSON.stringify(backup.touchlog));
+        if (backup.tasks)         localStorage.setItem('tc_tasks', JSON.stringify(backup.tasks));
+        if (backup.config)        localStorage.setItem('tc_config', JSON.stringify(backup.config));
+        if (backup.analytics)     localStorage.setItem('tc_analytics', JSON.stringify(backup.analytics));
+        console.log('✅ Backup restaurado: ' + backup.leads.length + ' leads carregados do servidor.');
       }
-    } else {
-      // file:// — carrega dados de demo
+    } catch(e) {
+      console.warn('⚠️ Não foi possível restaurar backup do servidor:', e.message);
+      // Demo local apenas
       const demo = [
         {id:uuid(),nome:'Ana Paula Ferreira',whatsapp:'(43) 99999-1111',status:'CADENCIA-ATIVA',tags:['PERFIL-EMPRESARIA','NET-WHATSAPP-GRUPO'],ticketEstimado:150000,pilarFraco:'',notas:'Empresária, clínica odonto, interessada em expansão',dataCriacao:today(),ultimaAtualizacao:today(),diaToqueAtual:1,proximoToque:today(),dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
-        {id:uuid(),nome:'Carla Mendes',whatsapp:'(43) 99999-2222',status:'AGUARDANDO-DIAGNOSTICO',tags:['PERFIL-LIBERAL','SEED-INDICACAO'],ticketEstimado:200000,pilarFraco:'Ferramenta',notas:'Advogada, indicação da Sandra. Quer imóvel comercial.',dataCriacao:new Date(Date.now()-5*86400000).toISOString().split('T')[0],ultimaAtualizacao:today(),diaToqueAtual:2,proximoToque:null,dataHoraDiagnostico:today(),dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
-        {id:uuid(),nome:'Roberto Silva',whatsapp:'(43) 99999-3333',status:'PROPOSTA-ENVIADA',tags:['PERFIL-INVESTIDOR','NET-INSTAGRAM'],ticketEstimado:100000,pilarFraco:'',notas:'Quer diversificar patrimônio. Proposta enviada há 3 dias.',dataCriacao:new Date(Date.now()-8*86400000).toISOString().split('T')[0],ultimaAtualizacao:new Date(Date.now()-3*86400000).toISOString().split('T')[0],diaToqueAtual:3,proximoToque:null,dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
         {id:uuid(),nome:'Beatriz Costa',whatsapp:'(43) 99999-4444',status:'NOVO',tags:['PERFIL-JOVEM','NET-INSTAGRAM'],ticketEstimado:80000,pilarFraco:'',notas:'Jovem, começando a investir. Viu story no Instagram.',dataCriacao:today(),ultimaAtualizacao:today(),diaToqueAtual:0,proximoToque:today(),dataHoraDiagnostico:null,dataRetornoNutricao:null,motivoNutricao:'',motivoPerdido:''},
       ];
       DB.saveLeads(demo);
     }
+  } else if (DB.getLeads().length === 0 && !temSessao && !isLocal) {
+    // GitHub Pages sem sessão — NÃO carrega demo, espera o login + sync
+    console.log('[Trinca 4.0] Sem sessão — aguardando login para carregar leads do Supabase');
   }
 
   const savedState = DB.getState();

@@ -52,6 +52,11 @@ function _idbPut(db, key, value) {
   });
 }
 
+// --- Cache invalidation (chamada após sync do Supabase) ---
+function _invalidateCache() {
+  _cache = {};
+}
+
 // --- Sync read/write via in-memory cache ---
 
 function _get(key) {
@@ -146,4 +151,6 @@ var DB = {
   saveLeadCtx: (c) => _set('tc_lead_ctx', JSON.stringify(c)),
   getMsgLog: (leadId) => JSON.parse(_get('tc_ml_'+leadId) || '[]'),
   saveMsgLog: (leadId, logs) => _set('tc_ml_'+leadId, JSON.stringify(logs.slice(-10))),
+  // Invalida cache em memória — chamar após sync do Supabase gravar no localStorage
+  invalidateCache: () => _invalidateCache(),
 };
