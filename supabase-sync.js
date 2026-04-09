@@ -7,21 +7,8 @@ const SUPABASE_URL  = 'https://fzocybokxulzchhkupbj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6b2N5Ym9reHVsemNoaGt1cGJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDk1OTEsImV4cCI6MjA5MDUyNTU5MX0.q2se5gYIPIuWK-s5bcPWm9NtWhpzLbl_zC1OzXrmZ7o';
 
 // ─── INIT ────────────────────────────────────────────
-// CORREÇÃO DEFINITIVA: navigator.locks causa "lock not released" e trava
-// o auth do Supabase em PWA/mobile/crash anterior. Solução: substituir
-// navigator.locks com implementação simples baseada em Promise.
-// Seguro: CRM é single-tab, não precisa de lock cross-tab real.
-if (typeof navigator !== 'undefined') {
-  // SEMPRE substituir — mesmo que exista — para evitar orphaned locks
-  navigator.locks = {
-    request: function(_name, _opts, cb) {
-      // Supabase chama como request(name, callback) ou request(name, opts, callback)
-      if (typeof _opts === 'function') { cb = _opts; }
-      // Executar o callback imediatamente com um lock fictício
-      return Promise.resolve(cb({ name: _name }));
-    }
-  };
-}
+// navigator.locks polyfill já aplicado no index.html ANTES do CDN carregar.
+// NÃO duplicar aqui — o polyfill do index.html é o que importa.
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     storageKey: 'trinca-crm-auth',
@@ -301,7 +288,7 @@ async function syncFromSupabase(retries = 3) {
     try {
       const cloudLeads = await SBLeads.loadAll();
       // MERGE INTELIGENTE: lead local mais recente ganha sobre cloud
-      const localLeads = JSON.parse(localStorage.getItem('tc_leads') || '[]');
+      const localLeads = JSON.parse(_get('tc_leads') || '[]');
       const localMap = {};
       for (const ll of localLeads) { if (ll.id) localMap[ll.id] = ll; }
       const merged = [];
@@ -352,7 +339,7 @@ async function syncFromSupabase(retries = 3) {
             date: h.data, humor: h.humor, energia: h.energia, phase: h.fase || null
           }));
           // Merge: manter entradas locais que ainda não foram pro Supabase
-          const localHistory = JSON.parse(localStorage.getItem('tc_state_history') || '[]');
+          const localHistory = JSON.parse(_get('tc_state_history') || '[]');
           const cloudDates = new Set(history.map(h => h.date));
           const merged = [...history];
           for (const lh of localHistory) {
@@ -381,7 +368,7 @@ async function syncFromSupabase(retries = 3) {
             phase: d.fase, pilarFraco: d.pilar_fraco, leadId: d.lead_id,
             ...(d.perguntas || {})
           }));
-          const localDebriefs = JSON.parse(localStorage.getItem('tc_debriefs') || '[]');
+          const localDebriefs = JSON.parse(_get('tc_debriefs') || '[]');
           const cloudIds = new Set(debriefs.map(d => d.id));
           const merged = [...debriefs];
           for (const ld of localDebriefs) {
@@ -399,7 +386,7 @@ async function syncFromSupabase(retries = 3) {
             leadId: t.lead_id, canal: t.canal, tipo: t.tipo,
             resultado: t.resultado, data: t.data
           }));
-          const localLog = JSON.parse(localStorage.getItem('tc_touchlog') || '[]');
+          const localLog = JSON.parse(_get('tc_touchlog') || '[]');
           // Merge por chave composta (leadId+data+canal)
           const cloudKeys = new Set(touchlog.map(t => `${t.leadId}|${t.data}|${t.canal}`));
           const merged = [...touchlog];
@@ -484,6 +471,15 @@ const PendingQueue = {
         else if (op.type === 'config')   await SBConfig.save(op.data);
         else if (op.type === 'touchlog') await SBTouchlog.append(op.data);
       } catch (e) {
+        const msg = (e.message || '').toLowerCase();
+        const isDuplicate = msg.includes('violates unique constraint') ||
+                            msg.includes('duplicate key') ||
+                            (e.status === 409) || (e.code === '23505');
+        if (isDuplicate) {
+          // Dado já existe no banco — remover da fila, não retentar
+          console.warn(`[PendingQueue] Duplicata detectada, removendo da fila:`, e.message);
+          continue;
+        }
         op.retries = (op.retries || 0) + 1;
         if (op.retries < 5) failed.push(op); // Descarta após 5 tentativas
         console.warn(`[PendingQueue] Falha (tentativa ${op.retries}):`, e.message);
