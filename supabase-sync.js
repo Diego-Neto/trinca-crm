@@ -98,9 +98,9 @@ const SBLeads = {
       notas:                  lead.notas || null,
       data_criacao:           lead.dataCriacao || new Date().toISOString().split('T')[0],
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
-      data_ganho:             lead.dataGanho || null,
-      data_perda:             lead.dataPerda || null,
-      updated_at:             new Date().toISOString(),
+      // data_ganho e data_perda: salvos apenas localmente até executar SQL no Supabase
+      // ALTER TABLE leads ADD COLUMN IF NOT EXISTS data_ganho DATE;
+      // ALTER TABLE leads ADD COLUMN IF NOT EXISTS data_perda DATE;
       _sync_version:          lead._syncVersion || 0,
     };
   },
