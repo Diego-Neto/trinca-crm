@@ -509,6 +509,7 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
   background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
   padding:6px 9px;cursor:pointer;font-size:15px;transition:all .2s;
   color:var(--text);line-height:1;flex-shrink:0;
+  min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;
 }
 .icon-btn:hover{border-color:var(--purple)}
 
@@ -590,8 +591,9 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 /* POMO DURATION BUTTONS */
 .pomo-durations{display:flex;gap:6px;justify-content:center;margin-bottom:10px}
 .pomo-dur-btn{
-  padding:4px 12px;border-radius:6px;border:1px solid var(--border2);
-  background:var(--bg3);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;
+  padding:10px 16px;border-radius:6px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--muted2);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+  min-height:44px;min-width:44px;
 }
 .pomo-dur-btn.active{background:rgba(139,92,246,0.15);border-color:var(--purple);color:var(--purple2)}
 
@@ -722,6 +724,14 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
   .pipeline-scroll{gap:10px}
   .kanban-col{min-width:260px}
 }
+@media (max-width: 360px) {
+  #header{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:6px;padding:8px 8px}
+  #header::-webkit-scrollbar{display:none}
+  .brand{font-size:13px}
+  .state-pill{padding:3px 6px;font-size:10px;min-width:0}
+  .icon-btn{min-width:36px;min-height:36px;padding:4px;font-size:14px}
+  #alert-btn{padding:4px 6px;font-size:14px}
+}
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body{padding-bottom:env(safe-area-inset-bottom)}
 }
@@ -737,7 +747,7 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .pb-sw{overflow-x:auto;scrollbar-width:none;margin-bottom:10px}
 .pb-sw::-webkit-scrollbar{display:none}
 .pb-stabs{display:flex;gap:4px;width:max-content;padding:10px 14px 0}
-.pb-stab{padding:5px 11px;border-radius:18px;font-size:10px;font-weight:700;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.pb-stab{padding:10px 14px;border-radius:18px;font-size:11px;font-weight:700;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}
 .pb-stab.on{background:rgba(139,92,246,0.15);color:var(--purple2);border-color:var(--purple)}
 .pb-icps{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;padding:0 14px}
 .pb-icp{padding:4px 10px;border-radius:10px;font-size:10px;font-weight:600;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
@@ -951,6 +961,39 @@ html.light .modal-box{box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 /* Report modal */
 #relatorio-modal .modal-box{max-width:520px}
 #relatorio-preview{white-space:pre-wrap;font-size:12px;color:var(--text);background:var(--bg3);padding:12px;border-radius:8px;max-height:50vh;overflow-y:auto;font-family:inherit;line-height:1.6}
+
+/* MEGA PROGRESS BAR */
+.mega-progress{
+  position:sticky;top:0;z-index:10;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 14px 8px;margin-bottom:4px;
+}
+.mega-progress-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.mega-progress-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.mega-progress-count{font-size:18px;font-weight:900;color:var(--purple2)}
+.mega-progress-bar{height:14px;background:var(--bg3);border-radius:7px;overflow:hidden}
+.mega-progress-fill{
+  height:100%;border-radius:7px;
+  background:linear-gradient(90deg,var(--purple),var(--purple2),var(--green));
+  transition:width .5s cubic-bezier(0.34,1.56,0.64,1);
+  position:relative;
+}
+.mega-progress-fill::after{
+  content:attr(data-pct);position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font-size:9px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* FOCO COUNTDOWN */
+.foco-countdown{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:16px}
+.foco-countdown-circle{
+  width:120px;height:120px;border-radius:50%;
+  border:4px solid var(--purple);
+  display:flex;align-items:center;justify-content:center;
+  animation:focoCountdownPulse 2s ease-in-out infinite;
+}
+.foco-countdown-num{font-size:48px;font-weight:900;color:var(--purple2)}
+.foco-countdown-label{font-size:14px;color:var(--muted);font-weight:600;text-align:center}
+@keyframes focoCountdownPulse{0%,100%{transform:scale(1);border-color:var(--purple)}50%{transform:scale(1.05);border-color:var(--purple2)}}
 
 /* Print styles */
 @media print{
