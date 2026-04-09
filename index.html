@@ -1213,15 +1213,42 @@ function getNutricaoAlerts() {
   var leads = DB.getLeads().filter(function(l) { return l.status === 'NUTRICAO'; });
   var alerts = [];
   var marcos = [15, 30, 45, 60];
+  var conteudos = {
+    15: 'Mito vs Verdade sobre consórcio',
+    30: 'Case de sucesso (personalize com nome, perfil e valor)',
+    45: 'Contexto externo (Selic, INCC, aluguel subiu)',
+    60: 'Comparativo numérico (12 meses aluguel vs consórcio)'
+  };
+
   leads.forEach(function(l) {
     if (!l.ultimaAtualizacao) return;
     var dias = Math.abs(daysDiff(l.ultimaAtualizacao) || 0);
+
+    // Alerta de retorno de nutrição próximo (dentro de 2 dias)
+    if (l.dataRetornoNutricao) {
+      var diffRetorno = daysDiff(l.dataRetornoNutricao);
+      if (diffRetorno !== null && diffRetorno >= -2 && diffRetorno <= 0) {
+        var marcoAtual = 15;
+        for (var m = marcos.length - 1; m >= 0; m--) {
+          if (dias >= marcos[m]) { marcoAtual = marcos[m]; break; }
+        }
+        var sugestao = conteudos[marcoAtual] || conteudos[15];
+        alerts.push({
+          type: 'purple',
+          title: '🌱 Retorno nutrição: ' + l.nome + (diffRetorno === 0 ? ' (HOJE!)' : ' (em ' + Math.abs(diffRetorno) + ' dia(s))'),
+          desc: 'D' + marcoAtual + ' — Enviar: ' + sugestao + '.' + (l.motivoNutricao ? ' Motivo: ' + l.motivoNutricao + '.' : '')
+        });
+      }
+    }
+
+    // Alerta de marco de nutrição (D15/D30/D45/D60)
     for (var i = marcos.length - 1; i >= 0; i--) {
       if (dias >= marcos[i]) {
+        var conteudo = conteudos[marcos[i]];
         alerts.push({
           type: dias >= 45 ? 'red' : 'yellow',
           title: '🌱 Nutrição D' + marcos[i] + ': ' + l.nome,
-          desc: 'Há ' + dias + ' dias em nutrição. ' + (l.motivoNutricao ? 'Motivo: ' + l.motivoNutricao + '. ' : '') + 'Hora de enviar conteúdo de valor ou reativar.'
+          desc: 'Há ' + dias + ' dias em nutrição. Enviar: ' + conteudo + '.' + (l.motivoNutricao ? ' Motivo: ' + l.motivoNutricao + '.' : '') + (dias >= 60 ? ' Considere reativar ou mover para Geladeira.' : '')
         });
         break;
       }

@@ -353,6 +353,16 @@ var PB_STAGES = [
     {q:'Nao responde conteudo',s:'Nao esta engajado — pode estar frio.',d:'Mantenha 1 toque por mes. Se 3 meses sem resposta, mova pra Geladeira.'},
     {q:'"Ja resolvi de outra forma"',s:'Foi pra concorrente ou mudou de ideia.',d:'"Que bom que resolveu! Se precisar do proximo patrimonio, to aqui." Move pra PERDIDO com motivo.'}
    ],
+   nurture_content:[
+    {d:'D15',titulo:'Mito vs Verdade sobre consorcio',
+     msg:'"[Nome], muita gente ainda acha que consorcio e compra parcelada lenta. Separei 3 mitos que mais confundem — e a verdade por tras de cada um. Vale 2 minutos de leitura: [link/texto]. Quando quiser trocar ideia, to aqui."'},
+    {d:'D30',titulo:'Case de sucesso',
+     msg:'"[Nome], quero te contar o caso do(a) [Nome do case], [perfil]. Situacao parecida com a sua — e em [X meses] conseguiu [resultado concreto] com um consorcio de R$ [valor]. Sem entrada, sem juros. Quando fizer sentido, te mostro os numeros."'},
+    {d:'D45',titulo:'Contexto externo (Selic, INCC, aluguel)',
+     msg:'"[Nome], a Selic [subiu/caiu] pra [X%], o INCC acumulou [Y%] no semestre e o aluguel medio [subiu Z%] na sua regiao. Pra quem ta planejando patrimonio, o cenario mudou. Tenho os numeros atualizados — quando quiser ver, me chama."'},
+    {d:'D60',titulo:'Comparativo numerico: 12 meses aluguel vs consorcio',
+     msg:'"[Nome], fiz uma conta rapida: quem paga R$ 2.000 de aluguel ja gastou R$ 24.000 em 12 meses — dinheiro que sumiu. No consorcio, esse mesmo valor vira patrimonio. Em 5 anos, a diferenca e de mais de R$ 120 mil. Posso montar o calculo com os seus numeros?"'}
+   ],
    crm:'DOR: [dor original]\nSTATUS: NUTRICAO · retorno: [data]\nPROXIMO: conteudo D[X] · [tipo conteudo]',
    lo:'Nutricao e tarefa perfeita pro estado baixo. Organiza, programa, sem pressao.',
    hi:'Prepara 4 conteudos personalizados por ICP de uma vez. Batch mode.'},
@@ -381,9 +391,37 @@ var PB_STAGES = [
     {q:'Nao responde nenhuma tentativa',s:'Nao quer dizer que nao — mas nao quer avancar.',d:'2 tentativas > PERDIDO-DEFINITIVO. Libera espaco pro proximo. You are a sifter.'},
     {q:'"Ja resolvi de outra forma"',s:'Foi pra concorrente ou resolveu diferente.',d:'"Que bom! Me conta — foi por qual caminho? Quando quiser o proximo patrimonio, to aqui."'}
    ],
+   reactivation_hooks:[
+    {id:'selic',nome:'Gancho Selic',
+     msg:'"[Nome], a Selic [subiu/caiu] essa semana. Pra quem ta pensando em patrimonio, o cenario mudou — e o consorcio ficou [mais atrativo/ainda mais seguro]. Lembrei de voce. 2 minutos pra te mostrar o impacto?"'},
+    {id:'fgts',nome:'Gancho FGTS',
+     msg:'"[Nome], saiu uma novidade sobre uso do FGTS pra consorcio que pode mudar o jogo pra voce. Muita gente nao sabe que da pra usar como lance ou amortizacao. Posso te explicar em 5 minutos?"'},
+    {id:'aluguel',nome:'Gancho Aluguel subiu',
+     msg:'"[Nome], o aluguel medio subiu [X%] esse trimestre. Quem paga R$ 2.000 hoje vai pagar R$ 2.200+ em breve — e continua sem patrimonio. Lembrei da nossa conversa. Ainda faz sentido olhar aquela alternativa?"'},
+    {id:'grupo-novo',nome:'Gancho Grupo novo',
+     msg:'"[Nome], abriu um grupo novo com condicoes que raramente aparecem: [detalhe real — parcela menor, taxa admin reduzida, credito maior]. Pensei em voce antes de oferecer pra lista. Quer que eu reserve?"'},
+    {id:'case-sucesso',nome:'Gancho Case de sucesso',
+     msg:'"[Nome], um cliente na sua mesma situacao foi contemplado [semana passada/mes passado] — em [X meses]. Perfil parecido com o seu. Quando tiver 5 minutos, te conto como foi."'}
+   ],
    crm:'DOR: [original + obstaculo se negociacao]\nSTATUS: GELADEIRA \u00B7 reativacao: [data]\nPROXIMO: gancho [externo/dor] \u00B7 [canal] \u00B7 [data]',
    lo:'Geladeira e tarefa do estado baixo — organiza reativacoes sem pressao.',
    hi:'Prepara ganchos personalizados por ICP pros proximos 30 dias.'}
+];
+
+// ═══════════════════════════════════════════════════
+// MICRO-LIÇÕES CONTEXTUAIS — 5 dicas antes de ações-chave
+// ═══════════════════════════════════════════════════
+var PB_MICRO_LESSONS = [
+  {id:'antes-ligar-frio',contexto:'Antes de ligar lead frio',
+   dica:'Respire. Leia a DOR do lead em voz alta. Defina UM objetivo pra essa ligacao (ex: gerar curiosidade, agendar diagnostico). Sem objetivo = ligacao perdida. Lembre: voce e um filtrador (sifter), nao um alquimista — nem todo lead vai responder, e ta tudo bem.'},
+  {id:'apos-vou-pensar',contexto:'Apos objecao "vou pensar"',
+   dica:'"Vou pensar" quase nunca e sobre pensar — e sobre medo, duvida ou falta de certeza. Antes de aceitar, faca UMA pergunta: "O que especificamente voce quer pensar melhor?" Se a resposta for vaga, a objecao e emocional. Reforce a certeza mais fraca (Voce, Ferramenta ou Realize).'},
+  {id:'pre-diagnostico',contexto:'Pre-diagnostico agendado',
+   dica:'Revise o CHAMP score do lead. Prepare 3 perguntas SPIN (Situacao, Problema, Implicacao). Voce e medico nessa conversa — diagnostica primeiro, receita depois. Nunca entre no diagnostico sem saber a dor principal. Releia as notas do CRM.'},
+  {id:'proposta-sem-resposta-48h',contexto:'Proposta sem resposta ha 48h',
+   dica:'Nao mande "viu minha proposta?". Isso gera pressao e afasta. Em vez disso, agregue valor: mande um case de sucesso parecido, um dado novo do mercado, ou pergunte "surgiu alguma duvida que posso esclarecer?". O silencio nem sempre e rejeicao — as vezes e vida corrida.'},
+  {id:'lead-parou-responder',contexto:'Lead parou de responder',
+   dica:'Depois de 2 tentativas sem resposta, PARE. Nao insista no mesmo canal. Mude o angulo: tente outro canal (Instagram, ligacao) com gancho externo (noticia, case). Se mesmo assim nao responder, respeite o silencio e mova pra Geladeira. Pipeline saudavel > lead forcado.'}
 ];
 
 function getPlaybookStage(lead) {
