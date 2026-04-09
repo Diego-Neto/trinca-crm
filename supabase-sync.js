@@ -457,12 +457,24 @@ const PendingQueue = {
   // Reprocessa a fila inteira
   async flush() {
     const queue = this.getAll();
-    if (queue.length === 0) return;
+    if (queue.length === 0) {
+      console.log('[PendingQueue] Fila vazia, nada para processar.');
+      return;
+    }
+
+    // Verificar se temos auth antes de tentar flush
+    if (!_currentUser) {
+      console.warn('[PendingQueue] flush() abortado: _currentUser é null. Itens permanecem na fila para próximo flush com auth.');
+      return;
+    }
+
     console.log(`[PendingQueue] Flushing ${queue.length} operações pendentes...`);
     SyncStatus.show('syncing');
 
     const failed = [];
-    for (const op of queue) {
+    for (let i = 0; i < queue.length; i++) {
+      const op = queue[i];
+      console.log(`[PendingQueue] [${i+1}/${queue.length}] Processando tipo="${op.type}" retries=${op.retries || 0} ts=${op.ts}`);
       try {
         if (op.type === 'leads')     await SBLeads.upsertBatch(op.data);
         else if (op.type === 'debrief')  await SBDebriefs.upsert(op.data);
@@ -470,19 +482,40 @@ const PendingQueue = {
         else if (op.type === 'tasks')    await SBTasks.upsertBatch(op.data);
         else if (op.type === 'config')   await SBConfig.save(op.data);
         else if (op.type === 'touchlog') await SBTouchlog.append(op.data);
+        console.log(`[PendingQueue] [${i+1}/${queue.length}] SUCESSO tipo="${op.type}"`);
       } catch (e) {
         const msg = (e.message || '').toLowerCase();
+        const code = e.code || '';
+        const status = e.status || 0;
+
+        // Duplicata: dado já existe no banco — remover da fila, não retentar
         const isDuplicate = msg.includes('violates unique constraint') ||
                             msg.includes('duplicate key') ||
-                            (e.status === 409) || (e.code === '23505');
+                            (status === 409) || (code === '23505');
         if (isDuplicate) {
-          // Dado já existe no banco — remover da fila, não retentar
-          console.warn(`[PendingQueue] Duplicata detectada, removendo da fila:`, e.message);
+          console.warn(`[PendingQueue] [${i+1}/${queue.length}] DUPLICATA tipo="${op.type}" — removido da fila. Detalhe: ${e.message}`);
           continue;
         }
+
+        // Auth falhou: manter na fila para próximo flush quando tiver auth
+        const isAuthError = msg.includes('not authenticated') ||
+                            msg.includes('jwt expired') ||
+                            msg.includes('invalid claim') ||
+                            msg.includes('no api key found') ||
+                            !_currentUser;
+        if (isAuthError) {
+          console.warn(`[PendingQueue] [${i+1}/${queue.length}] AUTH FALHOU tipo="${op.type}" — mantém na fila sem incrementar retries. Detalhe: ${e.message}`);
+          failed.push(op); // Mantém sem incrementar retries
+          continue;
+        }
+
         op.retries = (op.retries || 0) + 1;
-        if (op.retries < 5) failed.push(op); // Descarta após 5 tentativas
-        console.warn(`[PendingQueue] Falha (tentativa ${op.retries}):`, e.message);
+        if (op.retries < 5) {
+          failed.push(op); // Descarta após 5 tentativas
+          console.warn(`[PendingQueue] [${i+1}/${queue.length}] ERRO tipo="${op.type}" tentativa=${op.retries}/5 — mantém na fila. Detalhe: ${e.message}`);
+        } else {
+          console.error(`[PendingQueue] [${i+1}/${queue.length}] DESCARTADO tipo="${op.type}" após 5 tentativas. Detalhe: ${e.message}`);
+        }
       }
     }
 
@@ -581,6 +614,11 @@ const SyncStatus = {
       el.onclick = () => this._showQueueDetails();
     } else if (state === 'pending') {
       const n = PendingQueue.count;
+      if (n === 0) {
+        // Fila zerou após flush — mostrar OK em vez de pendente
+        this.show('ok');
+        return;
+      }
       el.textContent = `⏳ ${n} pendente${n>1?'s':''} — aguardando rede (toque p/ detalhes)`;
       el.style.background = 'rgba(245,158,11,0.15)'; el.style.color = '#f59e0b'; el.style.opacity = '1';
       el.style.cursor = 'pointer'; el.style.pointerEvents = 'auto';
@@ -591,6 +629,7 @@ const SyncStatus = {
   updateBadge() {
     const n = PendingQueue.count;
     if (n > 0) this.show('pending');
+    else this.show('ok');
   },
 
   track(type, promise, data) {
@@ -876,7 +915,10 @@ async function doUpdatePassword() {
           hideLoginScreen();
           await syncFromSupabase();
           patchDBForSupabase();
-          PendingQueue.flush().catch(() => {});
+          if (PendingQueue.count > 0) {
+            console.log(`[PendingQueue] Aguardando 2s para auth estabilizar após reset de senha (${PendingQueue.count} itens)...`);
+            setTimeout(() => { PendingQueue.flush().catch(() => {}); }, 2000);
+          }
           if (typeof refreshView === 'function') refreshView();
           console.log('[Trinca 4.0] Sync completo após reset de senha');
         }
@@ -953,12 +995,13 @@ document.addEventListener('keydown', (e) => {
         window._initCalled = true;
         init();
       }
-      // Flush pendentes — informar ao usuário
+      // Flush pendentes com delay de 2s para auth estabilizar
       if (PendingQueue.count > 0) {
         const _n = PendingQueue.count;
         showSyncToast('🔄 Enviando ' + _n + ' ite' + (_n > 1 ? 'ns' : 'm') + ' pendente' + (_n > 1 ? 's' : '') + '...', '#a78bfa');
+        console.log(`[PendingQueue] Aguardando 2s para auth estabilizar antes do flush (${_n} itens)...`);
+        setTimeout(() => { PendingQueue.flush().catch(() => {}); }, 2000);
       }
-      PendingQueue.flush().catch(() => {});
       // Registra listeners UMA VEZ (evita duplicação a cada auth change)
       if (!window._trincaListenersRegistered) {
         window._trincaListenersRegistered = true;
@@ -1032,12 +1075,13 @@ document.addEventListener('keydown', (e) => {
       window._initCalled = true;
       init();
     }
-    // Flush pendentes — informar ao usuário
+    // Flush pendentes com delay de 2s para auth estabilizar
     if (PendingQueue.count > 0) {
       const _n2 = PendingQueue.count;
       showSyncToast('🔄 Enviando ' + _n2 + ' ite' + (_n2 > 1 ? 'ns' : 'm') + ' pendente' + (_n2 > 1 ? 's' : '') + '...', '#a78bfa');
+      console.log(`[PendingQueue] Aguardando 2s para auth estabilizar antes do flush (${_n2} itens)...`);
+      setTimeout(() => { PendingQueue.flush().catch(() => {}); }, 2000);
     }
-    PendingQueue.flush().catch(() => {});
     if (typeof refreshView === 'function') refreshView();
     if (typeof updateBadges === 'function') updateBadges();
     if (typeof calcAnalytics === 'function') calcAnalytics();
