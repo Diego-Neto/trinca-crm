@@ -61,6 +61,8 @@ function _idbPut(db, key, value) {
 // --- Cache invalidation (chamada após sync do Supabase) ---
 function _invalidateCache() {
   _cache = {};
+  _parsedLeadsCache = null;
+  _parsedLeadsCacheRaw = null;
 }
 
 // --- Sync read/write via in-memory cache ---
@@ -126,11 +128,26 @@ async function _migrateToIDB() {
 // Kick off migration on load
 _migrateToIDB();
 
+// --- Memoização de getLeads (Sprint 2A) ---
+var _parsedLeadsCache = null;
+var _parsedLeadsCacheRaw = null;
+
 // --- Public API (100% sync, mesmo interface de antes) ---
 
 var DB = {
-  getLeads: () => JSON.parse(_get('tc_leads') || '[]'),
-  saveLeads: (l) => _set('tc_leads', JSON.stringify(l)),
+  getLeads: function() {
+    var raw = _get('tc_leads') || '[]';
+    if (raw === _parsedLeadsCacheRaw && _parsedLeadsCache) return _parsedLeadsCache;
+    _parsedLeadsCache = JSON.parse(raw);
+    _parsedLeadsCacheRaw = raw;
+    return _parsedLeadsCache;
+  },
+  saveLeads: function(l) {
+    _parsedLeadsCache = l;
+    var json = JSON.stringify(l);
+    _parsedLeadsCacheRaw = json;
+    _set('tc_leads', json);
+  },
   saveLead: function(lead) {
     lead._syncVersion = (lead._syncVersion || 0) + 1;
     lead.ultimaAtualizacao = new Date().toISOString().split('T')[0];
