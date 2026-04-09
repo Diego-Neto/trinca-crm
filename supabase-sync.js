@@ -33,6 +33,7 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
 });
 let _currentUser  = null;
 let _currentPerfil = null;
+let _syncInProgress = false;
 
 // ─── AUTH ────────────────────────────────────────────
 const SBAuth = {
@@ -111,7 +112,6 @@ const SBLeads = {
       notas:                  lead.notas || null,
       data_criacao:           lead.dataCriacao || new Date().toISOString().split('T')[0],
       ultima_atualizacao:     lead.ultimaAtualizacao || new Date().toISOString().split('T')[0],
-      _sync_version:          lead._syncVersion || 0,
     };
   },
 
@@ -146,7 +146,6 @@ const SBLeads = {
       notas:                row.notas || '',
       dataCriacao:          row.data_criacao,
       ultimaAtualizacao:    row.ultima_atualizacao,
-      _syncVersion:         row._sync_version || 0,
       _vendedorId:          row.vendedor_id, // referência para gestor
     };
   },
@@ -297,15 +296,22 @@ const SBConfig = {
 // SYNC ENGINE — carrega Supabase → localStorage ao iniciar
 // ═══════════════════════════════════════════════════════
 async function syncFromSupabase(retries = 3) {
+  if (_syncInProgress) { console.log('[syncFromSupabase] já em andamento, ignorando'); return; }
+  _syncInProgress = true;
+  try { await _doSync(retries); } finally { _syncInProgress = false; }
+}
+
+async function _doSync(retries) {
   for (let i = 0; i < retries; i++) {
     try {
       const cloudLeads = await SBLeads.loadAll();
       // MERGE INTELIGENTE: lead local mais recente ganha sobre cloud
-      const localLeads = JSON.parse(localStorage.getItem('tc_leads') || '[]');
+      const localLeads = (typeof DB !== 'undefined') ? DB.getLeads() : JSON.parse(localStorage.getItem('tc_leads') || '[]');
       const localMap = {};
       for (const ll of localLeads) { if (ll.id) localMap[ll.id] = ll; }
       const merged = [];
       const cloudIds = new Set();
+      const pushToCloud = [];
       for (const cl of cloudLeads) {
         cloudIds.add(cl.id);
         const ll = localMap[cl.id];
@@ -315,9 +321,8 @@ async function syncFromSupabase(retries = 3) {
           const sameDate = ll.ultimaAtualizacao === cl.ultimaAtualizacao;
           const localHigherVersion = (ll._syncVersion || 0) > (cl._syncVersion || 0);
           if (localNewer || (sameDate && localHigherVersion)) {
-            // Local é mais recente — manter local e enviar pro Supabase
             merged.push(ll);
-            SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+            pushToCloud.push(ll);
           } else {
             merged.push(cl);
           }
@@ -329,11 +334,16 @@ async function syncFromSupabase(retries = 3) {
       for (const ll of localLeads) {
         if (ll.id && !cloudIds.has(ll.id)) {
           merged.push(ll);
-          SBLeads.upsert(ll).catch(e => PendingQueue.add({ type: 'leads', data: [ll] }));
+          pushToCloud.push(ll);
         }
       }
+      // Salvar merge result via localStorage direto (evita loop com patch)
       localStorage.setItem('tc_leads', JSON.stringify(merged));
-      console.log(`[Trinca 4.0] ${merged.length} leads sincronizados (${cloudLeads.length} cloud + merge local)`);
+      // Enviar leads locais mais recentes em batch único
+      if (pushToCloud.length > 0) {
+        SBLeads.upsertBatch(pushToCloud).catch(e => PendingQueue.add({ type: 'leads', data: pushToCloud }));
+      }
+      console.log(`[Trinca 4.0] ${merged.length} leads sincronizados (${cloudLeads.length} cloud, ${pushToCloud.length} enviados)`);
 
       // Sync tasks
       try {
@@ -570,14 +580,34 @@ function patchDBForSupabase() {
   if (DB._sbPatched) return;
   DB._sbPatched = true;
   const originalSaveLeads = DB.saveLeads.bind(DB);
+  DB._lastLeadSnapshot = {};
+  // Snapshot inicial para diff
+  try {
+    var _initLeads = DB.getLeads();
+    for (var _il of _initLeads) { if (_il.id) DB._lastLeadSnapshot[_il.id] = JSON.stringify(_il); }
+  } catch(e) {}
+
   DB.saveLeads = function(leads) {
+    // Detectar apenas leads que mudaram desde o último save
+    var changed = [];
+    var newSnapshot = {};
+    for (var l of leads) {
+      if (!l.id) continue;
+      var json = JSON.stringify(l);
+      newSnapshot[l.id] = json;
+      if (DB._lastLeadSnapshot[l.id] !== json) changed.push(l);
+    }
+    DB._lastLeadSnapshot = newSnapshot;
     originalSaveLeads(leads);
-    SyncStatus.track('leads', SBLeads.upsertBatch(leads), leads);
+    if (changed.length > 0) {
+      SyncStatus.track('leads', SBLeads.upsertBatch(changed), changed);
+    }
   };
 
   const originalSaveLead = DB.saveLead.bind(DB);
   DB.saveLead = function(lead) {
     const saved = originalSaveLead(lead);
+    if (saved.id) DB._lastLeadSnapshot[saved.id] = JSON.stringify(saved);
     SyncStatus.track('leads', SBLeads.upsert(saved), [saved]);
     return saved;
   };
