@@ -145,16 +145,35 @@ const SBLeads = {
   },
 
   async upsert(lead) {
+    if (!_currentUser?.id) {
+      console.error('[SBLeads.upsert] BLOQUEADO: _currentUser é null');
+      throw new Error('Usuário não autenticado');
+    }
     const row = this._toSB(lead);
-    const { error } = await _sb.from('leads').upsert(row, { onConflict: 'id' });
+    const { data, error } = await _sb.from('leads').upsert(row, { onConflict: 'id' }).select('id');
     if (error) { console.warn('[SBLeads.upsert]', error.message); throw error; }
+    if (!data || data.length === 0) {
+      console.error('[SBLeads.upsert] RLS BLOQUEOU: lead ' + lead.id + ' não foi gravado!');
+      throw new Error('RLS bloqueou escrita do lead ' + (lead.nome || lead.id));
+    }
   },
 
   async upsertBatch(leads) {
     if (!leads.length) return;
+    if (!_currentUser?.id) {
+      console.error('[SBLeads.upsertBatch] BLOQUEADO: _currentUser é null — dados NÃO enviados');
+      throw new Error('Usuário não autenticado — impossível salvar no Supabase');
+    }
     const rows = leads.map(l => this._toSB(l));
-    const { error } = await _sb.from('leads').upsert(rows, { onConflict: 'id' });
+    const { data, error } = await _sb.from('leads').upsert(rows, { onConflict: 'id' }).select('id');
     if (error) { console.warn('[SBLeads.upsertBatch]', error.message); throw error; }
+    if (!data || data.length === 0) {
+      console.error('[SBLeads.upsertBatch] RLS BLOQUEOU: upsert retornou 0 linhas! Verifique as policies da tabela leads no Supabase.');
+      throw new Error('RLS bloqueou escrita — 0 linhas gravadas. Verifique policies no Supabase Dashboard.');
+    }
+    if (data.length < rows.length) {
+      console.warn(`[SBLeads.upsertBatch] PARCIAL: enviados ${rows.length}, gravados ${data.length}. RLS pode estar bloqueando parte dos leads.`);
+    }
   },
 
   async delete(id) {
