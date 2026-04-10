@@ -5,6 +5,12 @@ const {
   STATUS_FLOW_ALLOWED, canAdvanceStatus
 } = require('./logic');
 
+// Helper: ISO local date string (matches today() in logic.js)
+function localISO(date) {
+  const d = date || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 // ═══════════════════════════════════════════════════
 // esc() — XSS sanitization
 // ═══════════════════════════════════════════════════
@@ -56,9 +62,8 @@ describe('today()', () => {
     expect(today()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  test('retorna a data atual', () => {
-    const now = new Date().toISOString().split('T')[0];
-    expect(today()).toBe(now);
+  test('retorna a data atual local', () => {
+    expect(today()).toBe(localISO());
   });
 });
 
@@ -93,13 +98,13 @@ describe('daysDiff()', () => {
   test('retorna positivo para data futura', () => {
     const future = new Date();
     future.setDate(future.getDate() + 5);
-    expect(daysDiff(future.toISOString().split('T')[0])).toBe(5);
+    expect(daysDiff(localISO(future))).toBe(5);
   });
 
   test('retorna negativo para data passada', () => {
     const past = new Date();
     past.setDate(past.getDate() - 3);
-    expect(daysDiff(past.toISOString().split('T')[0])).toBe(-3);
+    expect(daysDiff(localISO(past))).toBe(-3);
   });
 });
 
@@ -156,14 +161,14 @@ describe('calcNextTouch()', () => {
     // D1 = +1 dia da criação
     const expected = new Date();
     expected.setDate(expected.getDate() + CADENCE_DAYS[1]);
-    expect(result).toBe(expected.toISOString().split('T')[0]);
+    expect(result).toBe(localISO(expected));
   });
 
   test('calcula toque D4 corretamente', () => {
     const result = calcNextTouch({ dataCriacao: today(), diaToqueAtual: 2 });
     const expected = new Date();
     expected.setDate(expected.getDate() + CADENCE_DAYS[3]); // index 3 = D4
-    expect(result).toBe(expected.toISOString().split('T')[0]);
+    expect(result).toBe(localISO(expected));
   });
 });
 
@@ -189,7 +194,7 @@ describe('getPriority()', () => {
     future.setDate(future.getDate() + 5);
     expect(getPriority({
       status: 'AGUARDANDO-DIAGNOSTICO',
-      dataHoraDiagnostico: future.toISOString().split('T')[0]
+      dataHoraDiagnostico: localISO(future)
     })).toBe('B');
   });
 
@@ -282,7 +287,7 @@ describe('canAdvanceStatus()', () => {
     past.setDate(past.getDate() - 1);
     expect(getPriority({
       status: 'PROPOSTA-ENVIADA',
-      ultimaAtualizacao: past.toISOString().split('T')[0]
+      ultimaAtualizacao: localISO(past)
     })).toBe('A');
   });
 
